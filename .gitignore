@@ -1,0 +1,6 @@
+# Downloaded source dataset; regenerate or download it from ldkrsi/cpbl-opendata.
+cpbl-opendata/
+
+# Local backups and archives.
+*.zip
+BBO_challenge_backups/
