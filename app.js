@@ -301,6 +301,7 @@
   const TEAMS = importedDraft.length ? buildDraftPoolsFromImported(importedDraft) : buildFallbackPools();
 
   let gameMode = "minor";
+  let onlineDraftMode = false;
   let queryPlayerFilter = "all";
   let currentPool = null;
   let selectedPlayerId = null;
@@ -457,6 +458,7 @@
     renderPlayers();
     updateRerollButtons();
     updateRoundInfo();
+    updateOnlineDraftUi();
   }
 
   function isRoundLimitReached(player) {
@@ -585,6 +587,7 @@ ${info}
   }
 
   function enterGame(mode) {
+    onlineDraftMode = false;
     gameMode = mode;
     document.getElementById("gameModeTitle").textContent = {
       minor: "職業二軍頻道",
@@ -592,11 +595,40 @@ ${info}
       free: "自由頻道"
     }[mode];
     remakeDraft();
+    updateOnlineDraftUi();
     showView("gameView");
   }
 
   function showHome() {
+    window.BBOOnlineMatch?.leave();
     showView("homeView");
+  }
+
+  function updateOnlineDraftUi() {
+    const panel = document.getElementById("onlineMatchPanel");
+    const seasonButton = document.getElementById("seasonSimulationButton");
+    if (!panel || !seasonButton) return;
+    panel.hidden = !onlineDraftMode;
+    seasonButton.hidden = onlineDraftMode;
+    document.getElementById("simulationCardTitle").textContent = onlineDraftMode ? "連線配對" : "模擬球季";
+    if (onlineDraftMode && rosterCount() < config.rosterLimits.total) {
+      document.getElementById("onlineMatchButton").disabled = true;
+      document.getElementById("onlineMatchStatus").textContent =
+        `請先完成選秀（${rosterCount()} / ${config.rosterLimits.total}）`;
+    }
+  }
+
+  function startOnlineDraft(mode = "free") {
+    onlineDraftMode = true;
+    gameMode = mode;
+    document.getElementById("gameModeTitle").textContent = `連線對戰｜${{
+      minor: "職業二軍頻道",
+      amateur: "業餘頻道",
+      free: "自由頻道"
+    }[mode]}`;
+    remakeDraft();
+    updateOnlineDraftUi();
+    showView("gameView");
   }
 
   function getModeCardLimits() {
@@ -793,8 +825,14 @@ ${info}
     updateRoundInfo();
 
     if (rosterCount() >= config.rosterLimits.total) {
-      alert("選秀完成！即將自動模擬 120 場球季。");
-      simulateSeason();
+      if (onlineDraftMode) {
+        document.getElementById("onlineMatchButton").disabled = false;
+        document.getElementById("onlineMatchStatus").textContent = "選秀完成，可以開始尋找對手";
+        alert("選秀完成！現在可以按下「尋找對手」。");
+      } else {
+        alert("選秀完成！即將自動模擬 120 場球季。");
+        simulateSeason();
+      }
     }
   }
 
@@ -893,6 +931,7 @@ ${info}
     renderRoster();
     renderPlayers();
     updateRerollButtons();
+    updateOnlineDraftUi();
   }
 
   function hitterScore(player, slotKey) {
@@ -1200,6 +1239,9 @@ ${info}
 
   function openVersusMode() {
     resetVersusMode();
+    document.getElementById("versusSpinButton").hidden = false;
+    document.getElementById("versusSimulateButton").hidden = false;
+    document.getElementById("versusResetButton").hidden = false;
     startBackgroundMusic();
     showView("versusView");
   }
@@ -1439,6 +1481,51 @@ ${info}
       ${games.map(renderVersusGame).join("")}
       <div class="simulation-note">雙方先後攻每場隨機；第 1 至第 3 戰依序使用 SP1、SP2、SP3。</div>
     `;
+    return document.getElementById("versusResult").innerHTML;
+  }
+
+  function getOnlineDraftSnapshot() {
+    if (rosterCount() < config.rosterLimits.total) return null;
+    return JSON.parse(JSON.stringify({
+      mode: gameMode,
+      team: {
+        hitters: {
+          C: roster.hitters.C || null,
+          "1B": roster.hitters["1B"] || null,
+          "2B": roster.hitters["2B"] || null,
+          "3B": roster.hitters["3B"] || null,
+          SS: roster.hitters.SS || null,
+          OF1: roster.hitters.LF || null,
+          OF2: roster.hitters.CF || null,
+          OF3: roster.hitters.RF || null,
+          DH: roster.hitters.DH || null
+        },
+        pitchers: { ...roster.pitchers },
+        lineup: [...versusHitterSlots]
+      }
+    }));
+  }
+
+  function showOnlineMatchup(localTeam, opponentTeam, localIsPlayer1, mode) {
+    versusState = createVersusState();
+    versusState.teams = localIsPlayer1 ? [localTeam, opponentTeam] : [opponentTeam, localTeam];
+    versusState.mode = mode;
+    versusState.finished = true;
+    renderVersusMode();
+    document.getElementById("versusSpinButton").hidden = true;
+    document.getElementById("versusSimulateButton").hidden = true;
+    document.getElementById("versusResetButton").hidden = true;
+    document.getElementById("versusModeSelect").disabled = true;
+    document.getElementById("versusPoolInfo").textContent = "配對成功，等待比賽結果";
+    document.getElementById("versusResult").hidden = true;
+    showView("versusView");
+  }
+
+  function renderOnlineSeries(resultHtml) {
+    const result = document.getElementById("versusResult");
+    result.hidden = false;
+    result.innerHTML = resultHtml;
+    document.getElementById("versusPoolInfo").textContent = "連線對戰完成";
   }
 
   window.selectPlayer = selectPlayer;
@@ -1467,6 +1554,13 @@ ${info}
   window.dropVersusLineup = dropVersusLineup;
   window.simulateVersusSeries = simulateVersusSeries;
   window.setVersusMode = setVersusMode;
+  window.BBOGame = {
+    startOnlineDraft,
+    getOnlineDraftSnapshot,
+    showOnlineMatchup,
+    simulateOnlineSeries: simulateVersusSeries,
+    renderOnlineSeries
+  };
 
   renderRoster();
   renderPlayers();

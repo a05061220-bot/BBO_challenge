@@ -113,6 +113,29 @@ background:linear-gradient(180deg,#ff9c78,#d65a4a);
 color:#fff;
 }
 
+.online-btn{
+width:100%;
+min-height:68px;
+margin-bottom:12px;
+background:linear-gradient(180deg,#65d5ff,#3476d4);
+color:#fff;
+}
+
+.online-status{
+margin-top:12px;
+padding:12px;
+border:1px solid rgba(101,213,255,.28);
+border-radius:12px;
+background:rgba(8,24,55,.78);
+color:var(--gold-soft);
+text-align:center;
+line-height:1.7;
+}
+
+.online-status button{
+margin-top:8px;
+}
+
 .channel-btn{
 min-height:82px;
 font-size:16px;
@@ -1136,6 +1159,12 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <div class="home-tools">
 <h2>雙人遊戲</h2>
 <button class="versus-btn" onclick="openVersusMode()">對戰模式<br><small>兩位玩家輪流選秀，進行三戰兩勝</small></button>
+<button class="online-btn" onclick="openOnlineMode()">連線對戰<br><small>先完成選秀，再尋找線上對手</small></button>
+<select id="onlineModeSelect" class="versus-mode-select" aria-label="連線對戰頻道">
+<option value="free">自由頻道</option>
+<option value="minor">職業二軍頻道</option>
+<option value="amateur">業餘頻道</option>
+</select>
 <h2>資料工具</h2>
 <button class="tool-btn" onclick="openPlayerQuery()">球員查詢<br><small>依聯盟、年度與球隊瀏覽完整數值</small></button>
 </div>
@@ -1162,7 +1191,7 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 </select>
 <button id="versusSpinButton" onclick="versusSpin()">🎲 SPIN</button>
 <button id="versusSimulateButton" onclick="simulateVersusSeries()" disabled>模擬三戰兩勝</button>
-<button onclick="resetVersusMode()">重新對戰</button>
+<button id="versusResetButton" onclick="resetVersusMode()">重新對戰</button>
 <button class="music-btn" data-music-mute onclick="toggleMusicMute()" title="靜音" aria-label="靜音">🔊</button>
 <button class="music-btn" onclick="skipMusicTrack()" title="下一首" aria-label="下一首">⏭</button>
 </div>
@@ -1263,13 +1292,18 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 
 <div class="card">
 
-<h2>模擬球季</h2>
+<h2 id="simulationCardTitle">模擬球季</h2>
 
-<button onclick="simulateSeason()">
-模擬120場
+<button id="seasonSimulationButton" onclick="simulateSeason()">
+<span id="seasonSimulationButtonLabel">模擬120場</span>
 </button>
 
 <div id="result" class="result"></div>
+<div id="onlineMatchPanel" class="online-status" hidden>
+<div id="onlineMatchStatus">完成選秀後即可尋找對手</div>
+<button id="onlineMatchButton" onclick="findOnlineOpponent()" disabled>尋找對手</button>
+<button id="onlineCancelButton" onclick="cancelOnlineMatch()" hidden>取消匹配</button>
+</div>
 
 </div>
 
@@ -1305,7 +1339,12 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 
 </div>
 <script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="app.js"></script>
+<script src="online-match.js"></script>
 
 </body>
 </html>

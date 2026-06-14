@@ -47,6 +47,7 @@ python -m http.server 8000
 - 業餘頻道：套用紫卡最多 1 位、紅卡加紫卡最多 6 位的陣容限制。
 - 自由頻道：玩法與其他選秀規則相同，但紅卡、紫卡數量不限。
 - 對戰模式：兩位玩家共用畫面輪流選秀，完成後進行三戰兩勝。
+- 連線對戰：兩位玩家分別完成選秀後，透過 Firebase 匿名配對進行三戰兩勝。
 - 球員查詢：位於首頁獨立的資料工具區，可依聯盟、年度及球隊瀏覽完整球員卡數值，並切換全部選手、野手及投手。
 
 頻道切換時會重新開始選秀，避免不同模式的陣容限制互相污染。
@@ -78,6 +79,34 @@ python -m http.server 8000
 - 任一玩家先取得兩勝即結束系列賽
 - 每場顯示 1 至 9 局逐局得分、總得分 `R`、安打 `H`、失誤 `E` 與 `WIN / LOSE`
 - 每場列出勝投、敗投、救援投手、全壘打球員及單場 MVP；MVP 顯示打數、安打、全壘打與打點
+
+### Firebase 連線對戰
+
+連線對戰沿用單人選秀規則。玩家先選擇頻道並完成 9 位打者、7 位投手，之後按下「尋找對手」。系統只會配對相同頻道的玩家，配對成功後使用對戰模式的左右陣容與三戰兩勝結果畫面。
+
+玩家使用 Firebase 匿名驗證，不需要輸入帳號或密碼。排隊、玩家陣容及比賽資料都設定 `onDisconnect` 清除；任一玩家關閉網頁或中斷連線後，該場暫存資料會從 Realtime Database 移除。
+
+#### Firebase 初次設定
+
+1. 在 [Firebase Console](https://console.firebase.google.com/) 建立專案及 Web App。
+2. 在 `Authentication` → `Sign-in method` 啟用 `Anonymous`。
+3. 建立 `Realtime Database`。
+4. 將 Web App 設定填入 `firebase-config.js`：
+
+```js
+window.BBOFirebaseConfig = {
+  apiKey: "...",
+  authDomain: "...firebaseapp.com",
+  databaseURL: "https://...-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "...",
+  appId: "..."
+};
+```
+
+5. 將 `firebase-database.rules.json` 的內容發布至 Realtime Database Rules。
+6. 將 GitHub Pages 網域加入 Firebase Authentication 的 Authorized domains。
+
+目前配對資料只允許已通過 Firebase 匿名驗證的使用者讀寫，且不會永久保存。若未填寫 `firebase-config.js`，按下尋找對手時會顯示設定提示，其他遊戲模式仍可正常使用。
 
 ### 選秀陣容
 

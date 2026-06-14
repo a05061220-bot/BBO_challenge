@@ -1,0 +1,34 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "onlinePlayers": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "matchQueue": {
+      "$mode": {
+        ".read": "auth != null",
+        ".indexOn": ["createdAt"],
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    },
+    "pairLocks": {
+      "$pairId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "matches": {
+      "$matchId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
