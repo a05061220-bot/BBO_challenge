@@ -5,6 +5,58 @@
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
+  const backgroundMusic = new Audio();
+  backgroundMusic.volume = 0.35;
+  let musicQueue = [];
+  let musicStarted = false;
+
+  function shuffle(items) {
+    const result = [...items];
+    for (let index = result.length - 1; index > 0; index--) {
+      const swapIndex = rand(0, index);
+      [result[index], result[swapIndex]] = [result[swapIndex], result[index]];
+    }
+    return result;
+  }
+
+  function playNextMusicTrack() {
+    if (!config.musicTracks?.length) {
+      return;
+    }
+
+    if (!musicQueue.length) {
+      musicQueue = shuffle(config.musicTracks);
+    }
+
+    backgroundMusic.src = musicQueue.shift();
+    backgroundMusic.play().catch(() => {
+      musicStarted = false;
+    });
+  }
+
+  function startBackgroundMusic() {
+    if (musicStarted) {
+      return;
+    }
+
+    musicStarted = true;
+    playNextMusicTrack();
+  }
+
+  function toggleMusicMute() {
+    backgroundMusic.muted = !backgroundMusic.muted;
+    const button = document.getElementById("muteMusicButton");
+    button.textContent = backgroundMusic.muted ? "🔇" : "🔊";
+    button.title = backgroundMusic.muted ? "取消靜音" : "靜音";
+  }
+
+  function skipMusicTrack() {
+    musicStarted = true;
+    playNextMusicTrack();
+  }
+
+  backgroundMusic.addEventListener("ended", playNextMusicTrack);
+
   function randomName() {
     const last = ["王", "陳", "林", "張", "黃", "李", "郭", "鄭"];
     const first = ["志豪", "智勝", "國慶", "威倫", "建民", "宗賢", "子豪", "家駒", "耀勳", "宏裕"];
@@ -28,6 +80,10 @@
     return positions.map(pos => pos === "OF" ? "外野" : pos).join("/");
   }
 
+  function formatShortYear(year) {
+    return String(Number(year) % 100).padStart(2, "0");
+  }
+
   function cardTypeClass(cardType) {
     return {
       "藍": "card-blue",
@@ -38,7 +94,7 @@
   }
 
   function statItem(label, value) {
-    return `<span class="stat-item"><span>${label}</span><strong class="${value > 80 ? "stat-high" : ""}">${value}</strong></span>`;
+    return `<span class="stat-item"><span>${label}</span><strong class="${value >= 80 ? "stat-high" : ""}">${value}</strong></span>`;
   }
 
   function renderPlayerStats(player, statsClass) {
@@ -58,6 +114,48 @@
         ];
 
     return `<div class="${statsClass} stats-grid">${stats.map(([label, value]) => statItem(label, value)).join("")}</div>`;
+  }
+
+  function renderRosterPlayer(player) {
+    if (!player) {
+      return "點選加入";
+    }
+
+    return `
+<span class="roster-player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}</span>
+<div class="roster-player-tooltip">${renderPlayerStats(player, "stats roster-tooltip-stats")}</div>
+`;
+  }
+
+  function cardTypeRank(cardType) {
+    return {
+      "紫": 4,
+      "紅": 3,
+      "黃": 2,
+      "藍": 1
+    }[cardType] || 0;
+  }
+
+  function playerOverall(player) {
+    if (player.type === "hitter") {
+      return (player.power + player.contact + player.speed + player.fielding + player.arm) / 5;
+    }
+
+    return (player.stamina + player.control + player.velocity + player.breaking) / 4;
+  }
+
+  function compareDraftPlayers(left, right) {
+    const cardDiff = cardTypeRank(right.cardType) - cardTypeRank(left.cardType);
+    if (cardDiff !== 0) {
+      return cardDiff;
+    }
+
+    const overallDiff = playerOverall(right) - playerOverall(left);
+    if (overallDiff !== 0) {
+      return overallDiff;
+    }
+
+    return left.name.localeCompare(right.name, "zh-Hant");
   }
 
   function normalizeImportedPlayer(raw, index) {
@@ -126,7 +224,7 @@
       pools.get(poolKey).players.push(player);
     });
 
-    return [...pools.values()].sort((left, right) => {
+    const sortedPools = [...pools.values()].sort((left, right) => {
       const yearDiff = left.year - right.year;
       if (yearDiff !== 0) {
         return yearDiff;
@@ -134,6 +232,9 @@
 
       return left.team.localeCompare(right.team, "zh-Hant");
     });
+
+    sortedPools.forEach(pool => pool.players.sort(compareDraftPlayers));
+    return sortedPools;
   }
 
   function generateTeamRoster(team, year) {
@@ -198,6 +299,12 @@
   let selectedPlayerId = null;
   let draftStarted = false;
   let playerPickedThisRound = false;
+  let rerollUsed = false;
+  let playerFilter = "all";
+  let roundPicks = {
+    hitters: 0,
+    pitchers: 0
+  };
 
   const roster = {
     hitters: {},
@@ -229,8 +336,75 @@
       Object.values(roster.pitchers).some(player => player?.id === playerId);
   }
 
+  function eliteRosterCount() {
+    const players = [
+      ...Object.values(roster.hitters),
+      ...Object.values(roster.pitchers)
+    ].filter(Boolean);
+
+    return players.filter(player => player.cardType === "紅" || player.cardType === "紫").length;
+  }
+
+  function purpleRosterCount() {
+    const players = [
+      ...Object.values(roster.hitters),
+      ...Object.values(roster.pitchers)
+    ].filter(Boolean);
+
+    return players.filter(player => player.cardType === "紫").length;
+  }
+
+  function rosterCardTypeCounts() {
+    const counts = { "紫": 0, "紅": 0, "黃": 0, "藍": 0 };
+    const players = [
+      ...Object.values(roster.hitters),
+      ...Object.values(roster.pitchers)
+    ].filter(Boolean);
+
+    players.forEach(player => {
+      if (Object.hasOwn(counts, player.cardType)) {
+        counts[player.cardType]++;
+      }
+    });
+
+    return counts;
+  }
+
   function clearSelection() {
     selectedPlayerId = null;
+  }
+
+  function randomPool(pools) {
+    return pools[rand(0, pools.length - 1)];
+  }
+
+  function updateRerollButtons() {
+    const canReroll = draftStarted && rosterCount() < config.rosterLimits.total;
+    document.getElementById("rerollYearButton").disabled = !canReroll || rerollUsed;
+    document.getElementById("rerollTeamButton").disabled = !canReroll || rerollUsed;
+  }
+
+  function showCurrentPool() {
+    clearSelection();
+    document.getElementById("teamInfo").innerHTML = `🎯 ${currentPool.year} ${currentPool.team}`;
+    updateRoundInfo();
+    renderPlayers();
+    renderRoster();
+    updateRerollButtons();
+  }
+
+  function updateRoundInfo() {
+    const counts = rosterCardTypeCounts();
+    document.getElementById("selectionInfo").innerHTML = `
+      <span>本輪已選：打者 ${roundPicks.hitters} / ${config.roundLimits.hitters}，投手 ${roundPicks.pitchers} / ${config.roundLimits.pitchers}</span>
+      <span class="card-counts" title="紫卡最多2位；紅卡與紫卡合計最多10位">
+        <span class="card-count card-purple">紫 ${counts["紫"]}</span>
+        <span class="card-count card-red">紅 ${counts["紅"]}</span>
+        <span class="card-count card-yellow">黃 ${counts["黃"]}</span>
+        <span class="card-count card-blue">藍 ${counts["藍"]}</span>
+        <span class="elite-count">紅紫 ${counts["紫"] + counts["紅"]}/10</span>
+      </span>
+    `;
   }
 
   function selectPlayer(playerId) {
@@ -241,18 +415,30 @@
     }
 
     selectedPlayerId = playerId;
-    playerPickedThisRound = true;
     renderRoster();
     renderPlayers();
+    updateRerollButtons();
+    updateRoundInfo();
+  }
+
+  function isRoundLimitReached(player) {
+    return player.type === "hitter"
+      ? roundPicks.hitters >= config.roundLimits.hitters
+      : roundPicks.pitchers >= config.roundLimits.pitchers;
   }
 
   function getAvailableRosterSlotsForPlayer(player) {
-    if (isPlayerAlreadyOnRoster(player.id)) {
+    const eliteLimitReached =
+      (player.cardType === "紅" || player.cardType === "紫") &&
+      eliteRosterCount() >= 10;
+    const purpleLimitReached = player.cardType === "紫" && purpleRosterCount() >= 2;
+
+    if (isPlayerAlreadyOnRoster(player.id) || isRoundLimitReached(player) || eliteLimitReached || purpleLimitReached) {
       return [];
     }
 
     if (player.type === "hitter") {
-      return config.hitterSlotConfigs.filter(slot => {
+      return config.fieldSlots.filter(slot => {
         if (roster.hitters[slot.key]) {
           return false;
         }
@@ -285,7 +471,7 @@
       return `
 <div class="field-slot clickable ${player ? "occupied" : "empty"} ${eligible ? "eligible" : ""}" style="--x:${slot.x};--y:${slot.y};" onclick="addSelectedToSlot('${slot.key}')">
 <b>${slot.label}</b><br>
-${player?.name || "點選加入"}
+${renderRosterPlayer(player)}
 </div>
 `;
     }).join("");
@@ -297,7 +483,7 @@ ${player?.name || "點選加入"}
       return `
 <div class="pitcher-slot clickable ${player ? "occupied" : "empty"} ${eligible ? "eligible" : ""}" onclick="addSelectedToSlot('${slot}')">
 <b>${slot}</b><br>
-${player?.name || "點選加入"}
+${renderRosterPlayer(player)}
 </div>
 `;
     }).join("");
@@ -315,7 +501,17 @@ ${player?.name || "點選加入"}
 
     const selectedPlayer = getSelectedPlayer();
 
-    const html = currentPool.players.map(player => {
+    const visiblePlayers = currentPool.players.filter(player => {
+      if (playerFilter === "hitter") {
+        return player.type === "hitter";
+      }
+      if (playerFilter === "pitcher") {
+        return player.type === "pitcher";
+      }
+      return true;
+    });
+
+    const html = visiblePlayers.map(player => {
       const unavailable = isPlayerUnavailable(player);
       const eligibleSlots = selectedPlayer && selectedPlayer.id === player.id ? getAvailableRosterSlotsForPlayer(player) : [];
       const isSelected = selectedPlayerId === player.id;
@@ -325,14 +521,77 @@ ${player?.name || "點選加入"}
 
       return `
 <div class="player ${isSelected ? "selected" : ""} ${unavailable ? "unavailable" : ""}" onclick="selectPlayer('${player.id}')">
-<b class="player-name ${cardTypeClass(player.cardType)}">${player.name}</b>
-<span class="badge ${badgeClass}">${player.type === "hitter" ? formatHitterPositions(player.positions) : player.role}</span>
+<b class="player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}</b>
+<span class="badge position-badge ${badgeClass}">${player.type === "hitter" ? formatHitterPositions(player.positions) : player.role}</span>
 ${info}
 </div>
 `;
     }).join("");
 
     document.getElementById("players").innerHTML = html;
+  }
+
+  function setPlayerFilter(filter) {
+    playerFilter = filter;
+    document.querySelectorAll("[data-player-filter]").forEach(button => {
+      button.classList.toggle("active", button.dataset.playerFilter === filter);
+    });
+    renderPlayers();
+  }
+
+  function showDraftPanel() {
+    document.getElementById("draftPanel").hidden = false;
+    document.getElementById("simulationPanel").hidden = true;
+  }
+
+  function renderSimulationPlayer(slotKey, player, score) {
+    return `
+<div class="simulation-player">
+  <div class="simulation-player-head">
+    <span class="roster-player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}</span>
+    <span class="simulation-slot">${slotKey}</span>
+    <strong>${score.toFixed(1)}</strong>
+  </div>
+  ${renderPlayerStats(player, "stats stats-grid simulation-stats")}
+</div>
+`;
+  }
+
+  function showSimulationPanel({ wins, losses, grade, score, leagueAverageScore, scoreDiff, hitterEntries, pitcherEntries }) {
+    const hitterOrder = ["C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"];
+    const pitcherOrder = ["SP1", "SP2", "SP3", "RP1", "RP2", "CP1", "CP2"];
+    const sortedHitters = [...hitterEntries].sort(
+      ([leftSlot], [rightSlot]) => hitterOrder.indexOf(leftSlot) - hitterOrder.indexOf(rightSlot)
+    );
+    const sortedPitchers = [...pitcherEntries].sort(
+      ([leftSlot], [rightSlot]) => pitcherOrder.indexOf(leftSlot) - pitcherOrder.indexOf(rightSlot)
+    );
+    const hitterHtml = sortedHitters
+      .map(([slotKey, player]) => renderSimulationPlayer(slotKey, player, hitterScore(player, slotKey)))
+      .join("");
+    const pitcherHtml = sortedPitchers
+      .map(([slotKey, player]) => renderSimulationPlayer(slotKey, player, pitcherScore(player)))
+      .join("");
+
+    document.getElementById("draftPanel").hidden = true;
+    document.getElementById("simulationPanel").hidden = false;
+    document.getElementById("simulationPanel").innerHTML = `
+      <div class="simulation-summary">
+        <div><span>模擬戰績</span><strong>${wins}-${losses}</strong></div>
+        <div><span>評級</span><strong>${grade}</strong></div>
+        <div><span>隊伍分數</span><strong>${score.toFixed(1)}</strong></div>
+        <div><span>聯盟差距</span><strong>${scoreDiff >= 0 ? "+" : ""}${scoreDiff.toFixed(1)}</strong></div>
+      </div>
+      <div class="simulation-section">
+        <h3>打者陣容</h3>
+        <div class="simulation-roster">${hitterHtml}</div>
+      </div>
+      <div class="simulation-section">
+        <h3>投手陣容</h3>
+        <div class="simulation-roster">${pitcherHtml}</div>
+      </div>
+      <div class="simulation-note">聯盟平均分數：${leagueAverageScore.toFixed(1)}</div>
+    `;
   }
 
   function addSelectedToSlot(slotKey) {
@@ -345,6 +604,21 @@ ${info}
 
     if (isPlayerAlreadyOnRoster(player.id)) {
       alert("這位球員已經在你的陣容裡了");
+      return;
+    }
+
+    if ((player.cardType === "紅" || player.cardType === "紫") && eliteRosterCount() >= 10) {
+      alert("選秀陣容中的紅卡與紫卡合計最多10位");
+      return;
+    }
+
+    if (player.cardType === "紫" && purpleRosterCount() >= 2) {
+      alert("選秀陣容中的紫卡最多2位");
+      return;
+    }
+
+    if (isRoundLimitReached(player)) {
+      alert(player.type === "hitter" ? "本輪最多選擇兩位打者" : "本輪最多選擇兩位投手");
       return;
     }
 
@@ -374,9 +648,17 @@ ${info}
       roster.pitchers[slotKey] = player;
     }
 
+    if (player.type === "hitter") {
+      roundPicks.hitters++;
+    } else {
+      roundPicks.pitchers++;
+    }
+    playerPickedThisRound = true;
     clearSelection();
     renderRoster();
     renderPlayers();
+    updateRerollButtons();
+    updateRoundInfo();
 
     if (rosterCount() >= config.rosterLimits.total) {
       alert("選秀完成！");
@@ -384,6 +666,8 @@ ${info}
   }
 
   function spinTeam() {
+    startBackgroundMusic();
+
     if (draftStarted && !playerPickedThisRound) {
       alert("請先選擇一位球員再 SPIN");
       return;
@@ -394,16 +678,47 @@ ${info}
       return;
     }
 
-    currentPool = TEAMS[rand(0, TEAMS.length - 1)];
+    showDraftPanel();
+    currentPool = randomPool(TEAMS);
     draftStarted = true;
     playerPickedThisRound = false;
-    clearSelection();
+    roundPicks = {
+      hitters: 0,
+      pitchers: 0
+    };
+    showCurrentPool();
+  }
 
-    document.getElementById("teamInfo").innerHTML = `🎯 ${currentPool.year} ${currentPool.team}`;
-    document.getElementById("selectionInfo").innerHTML = "先選球員，再點對應守位加入隊伍";
+  function rerollYear() {
+    if (!draftStarted || rerollUsed) {
+      return;
+    }
 
-    renderPlayers();
-    renderRoster();
+    const alternatives = TEAMS.filter(pool => pool.team === currentPool.team && pool.year !== currentPool.year);
+    if (!alternatives.length) {
+      alert("這支球隊沒有其他可抽選年份");
+      return;
+    }
+
+    currentPool = randomPool(alternatives);
+    rerollUsed = true;
+    showCurrentPool();
+  }
+
+  function rerollTeam() {
+    if (!draftStarted || rerollUsed) {
+      return;
+    }
+
+    const alternatives = TEAMS.filter(pool => pool.year === currentPool.year && pool.team !== currentPool.team);
+    if (!alternatives.length) {
+      alert("這個年份沒有其他可抽選球隊");
+      return;
+    }
+
+    currentPool = randomPool(alternatives);
+    rerollUsed = true;
+    showCurrentPool();
   }
 
   function remakeDraft() {
@@ -411,6 +726,11 @@ ${info}
     selectedPlayerId = null;
     draftStarted = false;
     playerPickedThisRound = false;
+    rerollUsed = false;
+    roundPicks = {
+      hitters: 0,
+      pitchers: 0
+    };
 
     roster.hitters = {};
     roster.pitchers = {
@@ -426,13 +746,23 @@ ${info}
     document.getElementById("teamInfo").innerHTML = "按下 SPIN 開始";
     document.getElementById("selectionInfo").innerHTML = "";
     document.getElementById("result").innerHTML = "";
+    showDraftPanel();
 
     renderRoster();
     renderPlayers();
+    updateRerollButtons();
   }
 
-  function hitterScore(player) {
+  function hitterScore(player, slotKey) {
     const weights = config.seasonWeights;
+
+    if (slotKey === "DH") {
+      return (
+        player.power * weights.dhPower +
+        player.contact * weights.dhContact +
+        player.speed * weights.dhSpeed
+      );
+    }
 
     return (
       player.power * weights.hitterPower +
@@ -455,8 +785,10 @@ ${info}
   }
 
   function simulateSeason() {
-    const hitters = Object.values(roster.hitters);
-    const pitchers = Object.values(roster.pitchers).filter(Boolean);
+    const hitterEntries = Object.entries(roster.hitters);
+    const hitters = hitterEntries.map(([, player]) => player);
+    const pitcherEntries = Object.entries(roster.pitchers).filter(([, player]) => Boolean(player));
+    const pitchers = pitcherEntries.map(([, player]) => player);
 
     if (hitters.length < config.rosterLimits.hitters) {
       alert("野手未滿9位");
@@ -468,7 +800,7 @@ ${info}
       return;
     }
 
-    const hAvg = hitters.reduce((sum, player) => sum + hitterScore(player), 0) / hitters.length;
+    const hAvg = hitterEntries.reduce((sum, [slotKey, player]) => sum + hitterScore(player, slotKey), 0) / hitterEntries.length;
     const pAvg = pitchers.reduce((sum, player) => sum + pitcherScore(player), 0) / pitchers.length;
     const score = hAvg * 0.6 + pAvg * 0.4;
 
@@ -495,14 +827,30 @@ ${info}
         差距 ${scoreDiff >= 0 ? "+" : ""}${scoreDiff.toFixed(1)}，換算成 120 場勝場。
       </div>
     `;
+    showSimulationPanel({
+      wins,
+      losses,
+      grade,
+      score,
+      leagueAverageScore,
+      scoreDiff,
+      hitterEntries,
+      pitcherEntries
+    });
   }
 
   window.selectPlayer = selectPlayer;
   window.addSelectedToSlot = addSelectedToSlot;
   window.spinTeam = spinTeam;
+  window.rerollYear = rerollYear;
+  window.rerollTeam = rerollTeam;
+  window.toggleMusicMute = toggleMusicMute;
+  window.skipMusicTrack = skipMusicTrack;
+  window.setPlayerFilter = setPlayerFilter;
   window.remakeDraft = remakeDraft;
   window.simulateSeason = simulateSeason;
 
   renderRoster();
   renderPlayers();
+  updateRerollButtons();
 })();

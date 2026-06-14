@@ -56,9 +56,38 @@ function To-Ability {
     return [int][Math]::Round(60 + (40 * (Clamp $adjusted)))
 }
 
+function To-CappedAbility {
+    param(
+        [double]$Percentile,
+        [double]$Reliability,
+        [int]$Cap
+    )
+
+    $adjusted = 0.5 + (($Percentile - 0.5) * (Clamp $Reliability 0.2 1))
+    $curved = [Math]::Pow((Clamp $adjusted), 1.65)
+    $floor = [Math]::Max(60, $Cap - 18)
+    return [int][Math]::Round($floor + (($Cap - $floor) * $curved))
+}
+
+function To-BoundedAbility {
+    param(
+        [double]$Percentile,
+        [double]$Reliability,
+        [int]$Floor,
+        [int]$Cap
+    )
+
+    $adjusted = 0.5 + (($Percentile - 0.5) * (Clamp $Reliability 0.2 1))
+    $curved = [Math]::Pow((Clamp $adjusted), 1.15)
+    return [int][Math]::Round($Floor + (($Cap - $Floor) * $curved))
+}
+
 function Get-CardType {
-    param([double]$OverallPercentile)
-    if ($OverallPercentile -ge 0.97) { return [string][char]0x7D2B }
+    param(
+        [double]$OverallPercentile,
+        [bool]$IsPurple = $false
+    )
+    if ($IsPurple) { return [string][char]0x7D2B }
     if ($OverallPercentile -ge 0.85) { return [string][char]0x7D05 }
     if ($OverallPercentile -ge 0.50) { return [string][char]0x9EC3 }
     return [string][char]0x85CD
@@ -76,6 +105,148 @@ function Get-HitterAbilityCap {
         0x9EC3 { @{ power = 84; contact = 83; speed = 86; fielding = 80; arm = 80 } }
         default { @{ power = 80; contact = 80; speed = 80; fielding = 75; arm = 75 } }
     }
+    return $caps[$Ability]
+}
+
+function Get-HitterPowerContactCap {
+    param([string]$CardType)
+
+    switch ([int]$CardType[0]) {
+        0x7D2B { return 170 }
+        0x7D05 { return 160 }
+        0x9EC3 { return 155 }
+        default { return 150 }
+    }
+}
+
+function Get-HitterDefenseFloor {
+    param([string]$CardType)
+
+    switch ([int]$CardType[0]) {
+        0x7D2B { return 86 }
+        0x7D05 { return 79 }
+        0x9EC3 { return 74 }
+        default { return 68 }
+    }
+}
+
+function Get-TopKeys {
+    param(
+        [object[]]$Rows,
+        [scriptblock]$Value,
+        [int]$Count
+    )
+
+    $result = @{}
+    @($Rows | Sort-Object { [double](& $Value $_) } -Descending | Select-Object -First $Count) |
+        ForEach-Object { $result[$_._key] = $true }
+    return $result
+}
+
+function Apply-HitterPowerContactCap {
+    param(
+        [string]$CardType,
+        [int]$Power,
+        [int]$Contact,
+        [int]$Fielding,
+        [int]$Arm,
+        [string]$Preferred
+    )
+
+    $totalCap = Get-HitterPowerContactCap $CardType
+    $overflow = [Math]::Max(0, ($Power + $Contact) - $totalCap)
+    $pointsToTransfer = $overflow
+
+    while ($overflow -gt 0 -and ($Power + $Contact) -gt $totalCap) {
+        if ($Power -ge $Contact -and $Power -gt 60) {
+            $Power--
+        } elseif ($Contact -gt 60) {
+            $Contact--
+        } else {
+            break
+        }
+        $overflow--
+    }
+
+    $fieldingCap = Get-HitterAbilityCap $CardType 'fielding'
+    $armCap = Get-HitterAbilityCap $CardType 'arm'
+    while ($pointsToTransfer -gt 0 -and ($Fielding -lt $fieldingCap -or $Arm -lt $armCap)) {
+        if ($Fielding -le $Arm -and $Fielding -lt $fieldingCap) {
+            $Fielding++
+        } elseif ($Arm -lt $armCap) {
+            $Arm++
+        } elseif ($Fielding -lt $fieldingCap) {
+            $Fielding++
+        }
+        $pointsToTransfer--
+    }
+
+    $powerCap = Get-HitterAbilityCap $CardType 'power'
+    $contactCap = Get-HitterAbilityCap $CardType 'contact'
+    while ([Math]::Abs($Power - $Contact) -le 6) {
+        if ($Preferred -eq 'power') {
+            if ($Contact -gt 60) { $Contact-- }
+            elseif ($Power -lt $powerCap) { $Power++ }
+            else { break }
+        } else {
+            if ($Power -gt 60) { $Power-- }
+            elseif ($Contact -lt $contactCap) { $Contact++ }
+            else { break }
+        }
+    }
+
+    return @{
+        power = $Power
+        contact = $Contact
+        fielding = $Fielding
+        arm = $Arm
+    }
+}
+
+function Apply-PurpleDefenseTotalCap {
+    param(
+        [string]$CardType,
+        [int]$Fielding,
+        [int]$Arm
+    )
+
+    if ([int]$CardType[0] -ne 0x7D2B) {
+        return @{ fielding = $Fielding; arm = $Arm }
+    }
+
+    while (($Fielding + $Arm) -gt 178) {
+        if ($Fielding -ge $Arm -and $Fielding -gt 86) {
+            $Fielding--
+        } elseif ($Arm -gt 86) {
+            $Arm--
+        } else {
+            break
+        }
+    }
+
+    return @{ fielding = $Fielding; arm = $Arm }
+}
+
+function Get-PitcherAbilityCap {
+    param(
+        [string]$CardType,
+        [string]$Role,
+        [string]$Ability
+    )
+
+    $caps = switch ([int]$CardType[0]) {
+        0x7D2B { @{ stamina = 97; control = 96; velocity = 93; breaking = 93 } }
+        0x7D05 { @{ stamina = 88; control = 93; velocity = 86; breaking = 86 } }
+        0x9EC3 { @{ stamina = 84; control = 86; velocity = 82; breaking = 80 } }
+        default { @{ stamina = 80; control = 80; velocity = 78; breaking = 75 } }
+    }
+
+    if ($Role -in @('RP', 'CP')) {
+        $caps.stamina = [Math]::Min($caps.stamina, 70)
+        $caps.velocity += 2
+        $caps.breaking += 2
+    }
+
     return $caps[$Ability]
 }
 
@@ -179,9 +350,18 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
         $row | Add-Member -NotePropertyName _overallP -NotePropertyValue $overallP
     }
     $hitterOverallRanks = Get-PercentileMap -Rows $hitters -Value { param($r) $r._overallP }
+    $purpleHitterKeys = Get-TopKeys -Rows $hitters -Value { param($r) $r._overallP } -Count 5
 
     foreach ($row in $hitters) {
-        $cardType = Get-CardType $hitterOverallRanks[$row._key]
+        $cardType = Get-CardType $hitterOverallRanks[$row._key] ($purpleHitterKeys.ContainsKey($row._key))
+        $power = To-CappedAbility $row._powerP $row._reliability (Get-HitterAbilityCap $cardType 'power')
+        $contact = To-CappedAbility $row._contactP $row._reliability (Get-HitterAbilityCap $cardType 'contact')
+        $defenseFloor = Get-HitterDefenseFloor $cardType
+        $fielding = To-BoundedAbility $row._fieldP $row._reliability $defenseFloor (Get-HitterAbilityCap $cardType 'fielding')
+        $arm = To-BoundedAbility $row._armP $row._reliability $defenseFloor (Get-HitterAbilityCap $cardType 'arm')
+        $preferred = if ($row._powerP -ge $row._contactP) { 'power' } else { 'contact' }
+        $adjusted = Apply-HitterPowerContactCap $cardType $power $contact $fielding $arm $preferred
+        $defenseAdjusted = Apply-PurpleDefenseTotalCap $cardType $adjusted.fielding $adjusted.arm
         $result.Add([pscustomobject][ordered]@{
             id = "cpbl-$year-$($row.ID)-$($row.'Team ID')-h"
             source = 'cpbl-opendata-derived'
@@ -191,11 +371,11 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
             name = $row.Name
             cardType = $cardType
             positions = @(Get-HitterPositions $row._fieldRows)
-            power = [Math]::Min((To-Ability $row._powerP $row._reliability), (Get-HitterAbilityCap $cardType 'power'))
-            contact = [Math]::Min((To-Ability $row._contactP $row._reliability), (Get-HitterAbilityCap $cardType 'contact'))
-            speed = [Math]::Min((To-Ability $row._speedP $row._reliability), (Get-HitterAbilityCap $cardType 'speed'))
-            fielding = [Math]::Min((To-Ability $row._fieldP $row._reliability), (Get-HitterAbilityCap $cardType 'fielding'))
-            arm = [Math]::Min((To-Ability $row._armP $row._reliability), (Get-HitterAbilityCap $cardType 'arm'))
+            power = $adjusted.power
+            contact = $adjusted.contact
+            speed = To-CappedAbility $row._speedP $row._reliability (Get-HitterAbilityCap $cardType 'speed')
+            fielding = $defenseAdjusted.fielding
+            arm = $defenseAdjusted.arm
             hittingHand = $handedness[$row.ID]
             plateAppearances = [int](To-Number $row.PA)
         })
@@ -234,8 +414,10 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
         $row | Add-Member -NotePropertyName _role -NotePropertyValue $role
     }
     $pitcherOverallRanks = Get-PercentileMap -Rows $pitchers -Value { param($r) $r._overallP }
+    $purplePitcherKeys = Get-TopKeys -Rows $pitchers -Value { param($r) $r._overallP } -Count 5
 
     foreach ($row in $pitchers) {
+        $cardType = Get-CardType $pitcherOverallRanks[$row._key] ($purplePitcherKeys.ContainsKey($row._key))
         $result.Add([pscustomobject][ordered]@{
             id = "cpbl-$year-$($row.ID)-$($row.'Team ID')-p"
             source = 'cpbl-opendata-derived'
@@ -243,13 +425,13 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
             team = $row.'Team Name'
             year = $year
             name = $row.Name
-            cardType = Get-CardType $pitcherOverallRanks[$row._key]
+            cardType = $cardType
             role = $row._role
             roles = @($row._role)
-            stamina = To-Ability $row._staminaP $row._reliability
-            control = To-Ability $row._controlP $row._reliability
-            velocity = To-Ability $row._velocityP $row._reliability
-            breaking = To-Ability $row._breakingP $row._reliability
+            stamina = To-CappedAbility $row._staminaP $row._reliability (Get-PitcherAbilityCap $cardType $row._role 'stamina')
+            control = To-CappedAbility $row._controlP $row._reliability (Get-PitcherAbilityCap $cardType $row._role 'control')
+            velocity = To-CappedAbility $row._velocityP $row._reliability (Get-PitcherAbilityCap $cardType $row._role 'velocity')
+            breaking = To-CappedAbility $row._breakingP $row._reliability (Get-PitcherAbilityCap $cardType $row._role 'breaking')
             throwType = $handedness[$row.ID]
             battersFaced = [int](To-Number $row.BF)
         })

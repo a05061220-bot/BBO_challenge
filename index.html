@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>120-0 CPBL Draft</title>
+<title>120-0 BBO Draft</title>
 
 <style>
 :root{
@@ -60,7 +60,7 @@ gap:18px;
 
 .layout > div:last-child{
 order:2;
-flex:0 0 38%;
+flex:0 0 48%;
 }
 
 .card{
@@ -120,10 +120,14 @@ font-weight:700;
 }
 
 #teamInfo{
-padding:10px 14px;
-border-radius:16px;
-border:1px solid rgba(255,255,255,.08);
-background:rgba(8,14,30,.45);
+padding:12px 18px;
+border-radius:14px;
+border:2px solid rgba(245,200,76,.65);
+background:linear-gradient(180deg, rgba(28,58,112,.96), rgba(11,29,62,.96));
+box-shadow:0 0 0 2px rgba(245,200,76,.08),0 10px 24px rgba(0,0,0,.24);
+color:var(--gold-soft);
+font-size:21px;
+letter-spacing:.04em;
 }
 
 #selectionInfo{
@@ -133,24 +137,82 @@ border-radius:14px;
 background:rgba(245,200,76,.08);
 border:1px solid rgba(245,200,76,.15);
 color:#eed98d;
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:10px;
+flex-wrap:wrap;
+}
+
+.card-counts{
+display:inline-flex;
+align-items:center;
+gap:3px;
+}
+
+.card-count{
+display:inline-block;
+min-width:38px;
+padding:3px 5px;
+border-radius:2px;
+color:#fff;
+font-size:12px;
+font-weight:800;
+line-height:1.2;
+text-align:center;
+text-shadow:0 1px 1px rgba(0,0,0,.75);
+box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);
+}
+
+.card-count.card-purple{background:#59308d;}
+.card-count.card-red{background:#a92d3c;}
+.card-count.card-yellow{background:#a9770d;}
+.card-count.card-blue{background:#2657a6;}
+
+.elite-count{
+margin-left:4px;
+font-size:11px;
+color:#eed98d;
+}
+
+.player-filter{
+display:flex;
+gap:4px;
+margin-left:auto;
+}
+
+.filter-btn{
+padding:6px 9px;
+border-radius:8px;
+font-size:11px;
+background:#465574;
+color:#dce6ff;
+box-shadow:none;
+}
+
+.filter-btn.active{
+background:linear-gradient(180deg, #f6cf63, #e3b735);
+color:#191919;
 }
 
 .player-list{
 display:grid;
-grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-gap:10px;
+grid-template-columns:repeat(auto-fill,minmax(185px,1fr));
+gap:7px;
 margin-top:12px;
-max-height:720px;
+max-height:820px;
 overflow:auto;
 padding-right:4px;
 }
 
 .player{
 background:rgba(10,25,52,.92);
-padding:10px;
-border-radius:14px;
+padding:7px;
+padding-right:96px;
+border-radius:10px;
 border:1px solid rgba(255,255,255,.06);
 transition:transform .15s ease,border-color .15s ease;
+position:relative;
 }
 
 .player:hover{
@@ -162,6 +224,18 @@ transform:translateY(-1px);
 border-color:#ffd76b;
 box-shadow:0 0 0 1px rgba(245,200,76,.2),0 0 18px rgba(245,200,76,.18);
 background:rgba(17,44,86,.96);
+}
+
+.player.unavailable{
+background:rgba(34,42,58,.78);
+border-color:rgba(255,255,255,.035);
+filter:saturate(.35);
+cursor:not-allowed;
+}
+
+.player.unavailable:hover{
+border-color:rgba(255,255,255,.035);
+transform:none;
 }
 
 .player label{
@@ -188,6 +262,16 @@ color:#d7d7d7;
 .badge.eligible{
 background:var(--gold-soft);
 color:#111;
+}
+
+.position-badge{
+position:absolute;
+top:7px;
+right:7px;
+margin-left:0;
+white-space:nowrap;
+font-size:11px;
+padding:2px 6px;
 }
 
 .player-name{
@@ -220,11 +304,11 @@ color:#fff;
 .stats-grid{
 display:grid;
 grid-template-columns:repeat(2,minmax(76px,1fr));
-gap:3px 14px;
-padding:7px 9px;
+gap:2px 10px;
+padding:5px 7px;
 border-radius:8px;
 background:rgba(2,8,20,.38);
-font-size:13px;
+font-size:12px;
 }
 
 .stat-item{
@@ -256,38 +340,32 @@ color:#8f9bb8;
 
 .team-grid{
 position:relative;
-min-height:640px;
-padding:18px;
+min-height:0;
+aspect-ratio:1448 / 1086;
+padding:12px;
 border-radius:18px;
-background:
-radial-gradient(circle at center, rgba(255,255,255,.06), transparent 28%),
-linear-gradient(180deg, #2d9250, #1f643c);
+background-image:
+linear-gradient(rgba(4,14,28,.08),rgba(4,14,28,.08)),
+url("image/a29d7bf4-1015-4790-82d5-bdae237738d6.png");
+background-size:cover;
+background-position:center;
+background-repeat:no-repeat;
 border:1px solid rgba(255,255,255,.06);
 position:relative;
-overflow:hidden;
+overflow:visible;
 }
 
 .team-grid::before{
-content:"";
-position:absolute;
-left:50%;
-top:50%;
-width:56%;
-height:56%;
-border:2px solid rgba(255,236,190,.55);
-transform:translate(-50%,-50%) rotate(45deg);
-border-radius:8px;
-opacity:.72;
-pointer-events:none;
+display:none;
 }
 
 .field-slot,
 .pitcher-slot{
 background:rgba(14,24,45,.85);
-padding:12px 10px;
+padding:7px 7px;
 border-radius:12px;
-font-size:14px;
-min-height:72px;
+font-size:12px;
+min-height:55px;
 position:relative;
 z-index:1;
 text-align:center;
@@ -303,7 +381,7 @@ position:absolute;
 left:var(--x);
 top:var(--y);
 transform:translate(-50%,-50%);
-width:108px;
+width:96px;
 }
 
 .field-slot.clickable,
@@ -334,10 +412,68 @@ font-size:18px;
 line-height:1;
 }
 
+.reroll-btn{
+padding:10px 12px;
+font-size:12px;
+background:linear-gradient(180deg, #d8e4ff, #98add8);
+box-shadow:0 8px 18px rgba(120,155,220,.15);
+}
+
+.music-btn{
+min-width:38px;
+padding:9px 10px;
+font-size:16px;
+line-height:1;
+background:linear-gradient(180deg, #b8e0d3, #75b8a2);
+box-shadow:0 8px 18px rgba(80,170,145,.15);
+}
+
 .field-slot.occupied,
 .pitcher-slot.occupied{
 background:#16315f;
 color:#fff;
+}
+
+.roster-player-name{
+display:inline-block;
+padding:2px 5px;
+border-radius:2px;
+font-size:12px;
+line-height:1.25;
+color:#fff;
+text-shadow:0 1px 1px rgba(0,0,0,.7);
+box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);
+}
+
+.roster-player-name.card-blue{background:#2657a6;}
+.roster-player-name.card-yellow{background:#a9770d;}
+.roster-player-name.card-red{background:#a92d3c;}
+.roster-player-name.card-purple{background:#59308d;}
+
+.roster-player-tooltip{
+display:none;
+position:absolute;
+left:50%;
+bottom:calc(100% + 8px);
+transform:translateX(-50%);
+width:180px;
+padding:7px;
+border-radius:10px;
+background:rgba(4,12,28,.88);
+border:1px solid rgba(255,255,255,.18);
+box-shadow:0 10px 24px rgba(0,0,0,.35);
+z-index:20;
+pointer-events:none;
+}
+
+.field-slot.occupied:hover .roster-player-tooltip,
+.pitcher-slot.occupied:hover .roster-player-tooltip{
+display:block;
+}
+
+.roster-tooltip-stats{
+margin-top:0;
+background:rgba(255,255,255,.04);
 }
 
 .field-slot.empty,
@@ -346,8 +482,8 @@ color:#aab6d6;
 }
 
 .pitcher-board{
-margin-top:14px;
-padding:14px;
+margin-top:10px;
+padding:10px;
 border-radius:18px;
 background:linear-gradient(180deg, rgba(14,24,45,.96), rgba(10,20,38,.96));
 border:1px solid rgba(255,255,255,.06);
@@ -357,7 +493,7 @@ border:1px solid rgba(255,255,255,.06);
 display:flex;
 align-items:center;
 gap:8px;
-margin-bottom:12px;
+margin-bottom:8px;
 font-size:14px;
 color:#d7e2ff;
 }
@@ -365,13 +501,23 @@ color:#d7e2ff;
 .pitcher-grid{
 display:grid;
 grid-template-columns:repeat(3,minmax(0,1fr));
-gap:10px;
+gap:7px;
 }
 
 .field-slot b,
 .pitcher-slot b{
-font-size:13px;
-margin-bottom:4px;
+font-size:11px;
+margin-bottom:2px;
+}
+
+.actions button:not(.music-btn):not(.rewind-btn){
+border:1px solid rgba(255,255,255,.25);
+}
+
+.actions button[onclick="spinTeam()"]{
+padding:13px 22px;
+font-size:15px;
+box-shadow:0 0 0 2px rgba(245,200,76,.16),0 10px 24px rgba(245,200,76,.24);
 }
 
 .field-slot br,
@@ -395,6 +541,85 @@ font-size:13px;
 line-height:1.6;
 }
 
+.simulation-panel[hidden],
+.draft-panel[hidden]{
+display:none;
+}
+
+.simulation-summary{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:8px;
+margin:12px 0 16px;
+}
+
+.simulation-summary div{
+padding:10px;
+border-radius:10px;
+background:rgba(245,200,76,.09);
+border:1px solid rgba(245,200,76,.16);
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:8px;
+color:var(--muted);
+}
+
+.simulation-summary strong{
+color:var(--gold-soft);
+font-size:18px;
+}
+
+.simulation-section h3{
+margin:14px 0 8px;
+color:var(--gold-soft);
+}
+
+.simulation-roster{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:7px;
+}
+
+.simulation-player{
+padding:8px;
+border-radius:10px;
+background:rgba(10,25,52,.92);
+border:1px solid rgba(255,255,255,.06);
+}
+
+.simulation-player-head{
+display:flex;
+align-items:center;
+gap:6px;
+}
+
+.simulation-player-head strong{
+margin-left:auto;
+color:var(--gold-soft);
+font-size:12px;
+}
+
+.simulation-slot{
+padding:2px 5px;
+border-radius:999px;
+background:#465574;
+color:#fff;
+font-size:10px;
+font-weight:700;
+}
+
+.simulation-stats{
+margin-top:6px;
+}
+
+.simulation-note{
+margin-top:14px;
+text-align:center;
+color:var(--muted);
+font-size:12px;
+}
+
 @media(max-width:1100px){
 .layout{
 flex-direction:column;
@@ -413,7 +638,7 @@ max-height:none;
 }
 
 .team-grid{
-min-height:560px;
+min-height:0;
 }
 
 .field-slot{
@@ -430,7 +655,7 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 
 <div class="container">
 
-<h1>⚾ 120-0 CPBL Draft</h1>
+<h1>⚾ 120-0 BBO Draft</h1>
 
 <div class="layout">
 
@@ -452,6 +677,22 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 
 <button onclick="spinTeam()">
 🎲 SPIN
+</button>
+
+<button id="rerollYearButton" class="reroll-btn" onclick="rerollYear()" disabled>
+換年份
+</button>
+
+<button id="rerollTeamButton" class="reroll-btn" onclick="rerollTeam()" disabled>
+換球隊
+</button>
+
+<button id="muteMusicButton" class="music-btn" onclick="toggleMusicMute()" title="靜音" aria-label="靜音">
+🔊
+</button>
+
+<button class="music-btn" onclick="skipMusicTrack()" title="下一首" aria-label="下一首">
+⏭
 </button>
 </div>
 
@@ -488,12 +729,17 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 
 <div>
 
-<div class="card">
+<div id="draftPanel" class="card draft-panel">
 
 <div class="topbar">
 <h2 style="margin:0;">
 選秀名單
 </h2>
+<div class="player-filter" aria-label="選秀名單分類">
+<button class="filter-btn active" data-player-filter="all" onclick="setPlayerFilter('all')">全部選手</button>
+<button class="filter-btn" data-player-filter="hitter" onclick="setPlayerFilter('hitter')">野手</button>
+<button class="filter-btn" data-player-filter="pitcher" onclick="setPlayerFilter('pitcher')">投手</button>
+</div>
 <div class="counter" id="counter">
 0 / 15
 </div>
@@ -502,6 +748,8 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <div id="players" class="player-list"></div>
 
 </div>
+
+<div id="simulationPanel" class="card simulation-panel" hidden></div>
 
 </div>
 

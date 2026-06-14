@@ -1,4 +1,20 @@
 window.DraftConfig = {
+  musicTracks: [
+    "music/BEART_BEATS_320k.mp3",
+    "music/FIGHT_FIGHT_FIGHT_128k.mp3",
+    "music/FLY_ HIGH_320k.mp3",
+    "music/FUN_ FAIR_320k.mp3",
+    "music/IRONHORSE_320k.mp3",
+    "music/MAGUSEASON1_320k.mp3",
+    "music/MAGUSEASON2_320k.mp3",
+    "music/MAGUSEASON3_320k.mp3",
+    "music/MBCESPN_320k.mp3",
+    "music/MY_HERO_320k.mp3",
+    "music/NEW_JOURNEY_320k.mp3",
+    "music/SHINING_STAR_320k.mp3",
+    "music/SUMMER_EXERCISE_320k.mp3",
+    "music/THE_CHALLENGERS_320k.mp3"
+  ],
   teams: [
     "兄弟象",
     "統一獅",
@@ -26,15 +42,15 @@ window.DraftConfig = {
     { key: "DH", label: "指定打擊" }
   ],
   fieldSlots: [
-    { key: "CF", label: "外野", x: "50%", y: "10%" },
-    { key: "LF", label: "外野", x: "16%", y: "28%" },
-    { key: "RF", label: "外野", x: "84%", y: "28%" },
-    { key: "SS", label: "游擊", x: "38%", y: "42%" },
-    { key: "2B", label: "二壘", x: "62%", y: "42%" },
-    { key: "3B", label: "三壘", x: "23%", y: "62%" },
-    { key: "1B", label: "一壘", x: "77%", y: "62%" },
+    { key: "CF", label: "中外野", x: "50%", y: "27%" },
+    { key: "LF", label: "左外野", x: "29%", y: "36%" },
+    { key: "RF", label: "右外野", x: "71%", y: "36%" },
+    { key: "SS", label: "游擊", x: "40%", y: "50%" },
+    { key: "2B", label: "二壘", x: "60%", y: "50%" },
+    { key: "3B", label: "三壘", x: "31%", y: "64%" },
+    { key: "1B", label: "一壘", x: "69%", y: "64%" },
     { key: "C", label: "捕手", x: "50%", y: "82%" },
-    { key: "DH", label: "指打", x: "12%", y: "82%" }
+    { key: "DH", label: "指打", x: "31%", y: "86%" }
   ],
   pitcherSlots: ["SP1", "SP2", "SP3", "RP1", "RP2", "CP1", "CP2"],
   multiHitterPositionSets: [
@@ -58,12 +74,19 @@ window.DraftConfig = {
     pitchers: 7,
     total: 16
   },
+  roundLimits: {
+    hitters: 2,
+    pitchers: 2
+  },
   seasonWeights: {
     hitterPower: 0.28,
     hitterContact: 0.28,
     hitterSpeed: 0.12,
     hitterFielding: 0.18,
     hitterArm: 0.14,
+    dhPower: 0.38,
+    dhContact: 0.42,
+    dhSpeed: 0.2,
     pitcherVelocity: 0.2,
     pitcherControl: 0.3,
     pitcherStamina: 0.25,
