@@ -4,3 +4,6 @@ cpbl-opendata/
 # Local backups and archives.
 *.zip
 BBO_challenge_backups/
+
+# Regenerable Taiwan Baseball Wiki / Wayback cache.
+tml-cache/

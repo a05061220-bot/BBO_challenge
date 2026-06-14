@@ -451,6 +451,12 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
     }
 }
 
+$tmlPath = Join-Path $PSScriptRoot 'BBO_Search\tml-data.json'
+if (Test-Path $tmlPath) {
+    $tmlCards = Get-Content -Raw -Encoding UTF8 $tmlPath | ConvertFrom-Json
+    @($tmlCards) | ForEach-Object { $result.Add($_) }
+}
+
 $json = $result | ConvertTo-Json -Depth 8 -Compress
 [System.IO.File]::WriteAllText($OutputPath, "window.BBOImportedDraft = $json;", [System.Text.UTF8Encoding]::new($false))
 Write-Host "Exported $($result.Count) players to $OutputPath"

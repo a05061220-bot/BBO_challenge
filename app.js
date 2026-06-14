@@ -639,13 +639,37 @@ ${info}
     }[gameMode];
   }
 
+  function getPopulatedQueryPools(league, year = null) {
+    return TEAMS.filter(pool =>
+      pool.league === league &&
+      Array.isArray(pool.players) &&
+      pool.players.length > 0 &&
+      (year === null || pool.year === year)
+    );
+  }
+
   function populateQueryYears() {
     const league = document.getElementById("queryLeague").value;
     const yearSelect = document.getElementById("queryYear");
-    const years = [...new Set(TEAMS.filter(pool => pool.league === league).map(pool => pool.year))]
-      .sort((left, right) => right - left);
+    const previousYear = Number(yearSelect.value);
+    const firstYear = league === "TML" ? 1997 : 1990;
+    const lastYear = league === "TML" ? 2002 : 2025;
+    const years = Array.from(
+      { length: lastYear - firstYear + 1 },
+      (_, index) => lastYear - index
+    );
     yearSelect.innerHTML = years.map(year => `<option value="${year}">${year}</option>`).join("");
     yearSelect.disabled = years.length === 0;
+
+    if (years.length > 0 && Number.isFinite(previousYear) && previousYear > 0) {
+      const desiredYear = league === "TML"
+        ? Math.min(2002, Math.max(1997, previousYear))
+        : previousYear;
+      if (years.includes(desiredYear)) {
+        yearSelect.value = String(desiredYear);
+      }
+    }
+
     populateQueryTeams();
   }
 
@@ -653,9 +677,8 @@ ${info}
     const league = document.getElementById("queryLeague").value;
     const year = Number(document.getElementById("queryYear").value);
     const teamSelect = document.getElementById("queryTeam");
-    const teams = TEAMS
-      .filter(pool => pool.league === league && pool.year === year)
-      .map(pool => pool.team)
+    const teams = [...new Set(getPopulatedQueryPools(league, year)
+      .map(pool => pool.team))]
       .sort((left, right) => left.localeCompare(right, "zh-Hant"));
     teamSelect.innerHTML = teams.map(team => `<option value="${team}">${team}</option>`).join("");
     teamSelect.disabled = teams.length === 0;

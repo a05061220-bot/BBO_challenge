@@ -3,9 +3,14 @@
 The generated ratings are estimates based on real CPBL season statistics. They are not original
 Netmarble/Joybomb card values.
 
-Players are ranked only against players from the same league, season, and player type. If TML
-data is added, TML and CPBL percentiles, card tiers, and yearly purple-card limits must be
-calculated independently.
+Players are ranked only against players from the same league, season, and player type. TML and
+CPBL percentiles, card tiers, and yearly purple-card limits are calculated independently.
+
+The TML import contains 1997-2002 Taipei Gida, Taichung Agan, Chiayi-Tainan Luka, and
+Kaohsiung-Pingtung Fala players sourced from Taiwan Baseball Wiki career-stat tables through
+Internet Archive snapshots. TML percentiles and purple-card limits use the complete same-year
+four-team player pool. TML fielding and arm ratings are estimates because yearly fielding tables
+are unavailable.
 
 ## Source
 
