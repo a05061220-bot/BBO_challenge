@@ -105,6 +105,14 @@ min-height:58px;
 background:linear-gradient(180deg,#9bdac7,#58a990);
 }
 
+.versus-btn{
+width:100%;
+min-height:68px;
+margin-bottom:12px;
+background:linear-gradient(180deg,#ff9c78,#d65a4a);
+color:#fff;
+}
+
 .channel-btn{
 min-height:82px;
 font-size:16px;
@@ -166,6 +174,321 @@ font-weight:700;
 display:grid;
 grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
 gap:7px;
+}
+
+.versus-shell{
+max-width:1800px;
+margin:0 auto;
+padding:18px;
+}
+
+.versus-layout{
+display:grid;
+grid-template-columns:minmax(250px,1fr) minmax(420px,1.55fr) minmax(250px,1fr);
+gap:14px;
+align-items:start;
+}
+
+.versus-team{
+position:sticky;
+top:12px;
+}
+
+.versus-team.active{
+border-color:var(--gold);
+box-shadow:0 0 24px rgba(245,200,76,.28);
+}
+
+.versus-team h2,
+.versus-center h2{
+text-align:center;
+}
+
+.versus-team-head{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:8px;
+flex-wrap:wrap;
+}
+
+.versus-team-head h2{
+margin:0;
+}
+
+.versus-card-counts{
+display:flex;
+gap:3px;
+}
+
+.versus-card-counts .card-count{
+font-size:10px;
+padding:2px 7px;
+min-width:18px;
+text-align:center;
+}
+
+.versus-elite-limit{
+padding:2px 5px;
+border-radius:4px;
+background:#2f3950;
+font-size:10px;
+font-weight:700;
+}
+
+.versus-status{
+margin-bottom:12px;
+padding:10px;
+text-align:center;
+border-radius:12px;
+background:rgba(5,15,35,.7);
+color:var(--gold-soft);
+font-weight:700;
+}
+
+.versus-roster-section{
+margin-top:12px;
+}
+
+.versus-roster-section h3{
+margin:0 0 6px;
+font-size:13px;
+color:var(--gold-soft);
+}
+
+.versus-averages{
+display:inline-flex;
+gap:3px;
+margin-left:4px;
+vertical-align:middle;
+}
+
+.versus-averages span{
+display:grid;
+min-width:34px;
+padding:2px;
+border:1px solid rgba(255,255,255,.12);
+border-radius:4px;
+background:rgba(0,0,0,.25);
+color:var(--muted);
+font-size:8px;
+text-align:center;
+}
+
+.versus-averages strong{
+color:#fff;
+font-size:11px;
+}
+
+.versus-averages strong.average-red{
+color:#ff6678;
+}
+
+.versus-averages strong.average-purple{
+color:#b77cff;
+}
+
+.versus-roster-list{
+display:grid;
+gap:4px;
+}
+
+.versus-roster-row{
+position:relative;
+display:grid;
+grid-template-columns:35px minmax(0,1fr) auto;
+gap:5px;
+align-items:center;
+min-height:30px;
+padding:4px 6px;
+border-radius:7px;
+background:rgba(5,15,35,.68);
+font-size:11px;
+}
+
+.versus-roster-player{
+padding:3px 5px;
+border-radius:5px;
+color:#fff;
+}
+
+.versus-roster-player.card-blue{background:#2657a6;}
+.versus-roster-player.card-yellow{background:#a9770d;}
+.versus-roster-player.card-red{background:#a92d3c;}
+.versus-roster-player.card-purple{background:#59308d;}
+
+.versus-roster-tooltip{
+display:none;
+position:absolute;
+z-index:20;
+left:36px;
+bottom:calc(100% + 3px);
+min-width:180px;
+padding:8px;
+border-radius:8px;
+background:rgba(4,12,28,.96);
+border:1px solid rgba(255,255,255,.15);
+box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+
+.versus-roster-row:hover .versus-roster-tooltip{
+display:block;
+}
+
+.versus-mode-select{
+padding:10px;
+border-radius:9px;
+border:1px solid rgba(255,255,255,.14);
+background:#0c1d3d;
+color:#fff;
+font-weight:700;
+}
+
+.versus-roster-row .slot{
+color:var(--muted);
+font-weight:700;
+}
+
+.versus-roster-row.placeable{
+cursor:pointer;
+outline:1px solid #62e18f;
+background:rgba(30,115,68,.45);
+}
+
+.versus-roster-row.placeable .versus-roster-player{
+color:#9effbd;
+font-weight:700;
+}
+
+.lineup-draggable{
+cursor:grab;
+}
+
+.lineup-draggable:active{
+cursor:grabbing;
+opacity:.72;
+}
+
+.drag-handle{
+color:var(--muted);
+font-weight:700;
+letter-spacing:-2px;
+}
+
+.versus-actions{
+display:flex;
+justify-content:center;
+gap:8px;
+flex-wrap:wrap;
+margin-bottom:10px;
+}
+
+.versus-player-list{
+max-height:72vh;
+overflow:auto;
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:6px;
+}
+
+.versus-player-list .player{
+min-width:0;
+}
+
+.versus-result{
+margin-top:12px;
+padding:12px;
+border-radius:12px;
+background:rgba(5,15,35,.78);
+line-height:1.7;
+}
+
+.versus-game-result{
+margin-top:14px;
+padding:7px;
+border-radius:12px;
+background:rgba(2,10,22,.72);
+overflow:hidden;
+}
+
+.scoreboard{
+width:100%;
+table-layout:fixed;
+border-collapse:collapse;
+text-align:center;
+font-size:9px;
+}
+
+.scoreboard th,
+.scoreboard td{
+padding:3px 1px;
+border:1px solid rgba(255,255,255,.1);
+}
+
+.scoreboard th{
+color:var(--gold-soft);
+background:#172b52;
+}
+
+.scoreboard .team-cell{
+width:66px;
+text-align:left;
+white-space:nowrap;
+font-size:8px;
+font-weight:700;
+}
+
+.versus-game-heading{
+display:flex;
+align-items:flex-start;
+justify-content:space-between;
+gap:8px;
+margin-bottom:6px;
+}
+
+.versus-game-heading h3{
+flex:0 0 auto;
+margin:0;
+font-size:12px;
+color:var(--gold-soft);
+}
+
+.game-awards{
+display:flex;
+justify-content:flex-end;
+gap:3px 8px;
+flex-wrap:wrap;
+font-size:8px;
+color:var(--muted);
+}
+
+.game-awards .mvp-award{
+color:var(--gold-soft);
+}
+
+.versus-outcome{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:8px;
+margin-top:8px;
+}
+
+.versus-outcome div{
+padding:14px;
+text-align:center;
+border-radius:9px;
+background:#171f25;
+font-size:28px;
+font-style:italic;
+font-weight:800;
+}
+
+.versus-outcome .win{
+color:#ffd447;
+}
+
+.versus-outcome .lose{
+color:#b9bcc1;
 }
 
 h1{
@@ -756,6 +1079,14 @@ font-size:12px;
 flex-direction:column;
 }
 
+.versus-layout{
+grid-template-columns:1fr;
+}
+
+.versus-team{
+position:static;
+}
+
 .layout > div:first-child,
 .layout > div:last-child{
 order:unset;
@@ -803,8 +1134,45 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <button class="channel-btn free" onclick="enterGame('free')">自由頻道<br><small>紅卡、紫卡數量不限</small></button>
 </div>
 <div class="home-tools">
+<h2>雙人遊戲</h2>
+<button class="versus-btn" onclick="openVersusMode()">對戰模式<br><small>兩位玩家輪流選秀，進行三戰兩勝</small></button>
 <h2>資料工具</h2>
 <button class="tool-btn" onclick="openPlayerQuery()">球員查詢<br><small>依聯盟、年度與球隊瀏覽完整數值</small></button>
+</div>
+</div>
+</section>
+
+<section id="versusView" class="versus-shell" hidden>
+<div class="view-nav">
+<button onclick="showHome()">← 首頁</button>
+<h1>對戰模式</h1>
+</div>
+<div class="versus-layout">
+<div id="versusTeam1" class="card versus-team">
+<div class="versus-team-head"><h2>玩家1</h2><div id="versusCounts1" class="versus-card-counts"></div></div>
+<div id="versusRoster1"></div>
+</div>
+<div class="card versus-center">
+<div id="versusStatus" class="versus-status"></div>
+<div class="versus-actions">
+<select id="versusModeSelect" class="versus-mode-select" onchange="setVersusMode(this.value)">
+<option value="free">自由頻道</option>
+<option value="minor">職業二軍頻道</option>
+<option value="amateur">業餘頻道</option>
+</select>
+<button id="versusSpinButton" onclick="versusSpin()">🎲 SPIN</button>
+<button id="versusSimulateButton" onclick="simulateVersusSeries()" disabled>模擬三戰兩勝</button>
+<button onclick="resetVersusMode()">重新對戰</button>
+<button class="music-btn" data-music-mute onclick="toggleMusicMute()" title="靜音" aria-label="靜音">🔊</button>
+<button class="music-btn" onclick="skipMusicTrack()" title="下一首" aria-label="下一首">⏭</button>
+</div>
+<div id="versusPoolInfo" class="info">由玩家1按下 SPIN 開始</div>
+<div id="versusPlayers" class="versus-player-list"></div>
+<div id="versusResult" class="versus-result" hidden></div>
+</div>
+<div id="versusTeam2" class="card versus-team">
+<div class="versus-team-head"><h2>玩家2</h2><div id="versusCounts2" class="versus-card-counts"></div></div>
+<div id="versusRoster2"></div>
 </div>
 </div>
 </section>

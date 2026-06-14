@@ -45,9 +45,10 @@
 
   function toggleMusicMute() {
     backgroundMusic.muted = !backgroundMusic.muted;
-    const button = document.getElementById("muteMusicButton");
-    button.textContent = backgroundMusic.muted ? "🔇" : "🔊";
-    button.title = backgroundMusic.muted ? "取消靜音" : "靜音";
+    document.querySelectorAll("#muteMusicButton, [data-music-mute]").forEach(button => {
+      button.textContent = backgroundMusic.muted ? "🔇" : "🔊";
+      button.title = backgroundMusic.muted ? "取消靜音" : "靜音";
+    });
   }
 
   function skipMusicTrack() {
@@ -326,6 +327,33 @@
     }
   };
 
+  const versusHitterSlots = ["C", "1B", "2B", "3B", "SS", "OF1", "OF2", "OF3", "DH"];
+  const versusPitcherSlots = ["SP1", "SP2", "SP3", "RP1", "RP2", "CP1", "CP2"];
+  const lineupWeights = [1.08, 1.06, 1.05, 1.04, 1, 0.98, 0.96, 0.94, 0.89];
+  let versusState = createVersusState();
+
+  function createVersusTeam() {
+    return {
+      hitters: Object.fromEntries(versusHitterSlots.map(slot => [slot, null])),
+      pitchers: Object.fromEntries(versusPitcherSlots.map(slot => [slot, null])),
+      lineup: [...versusHitterSlots]
+    };
+  }
+
+  function createVersusState() {
+    return {
+      teams: [createVersusTeam(), createVersusTeam()],
+      mode: "free",
+      currentPool: null,
+      pendingPlayerId: null,
+      draggedLineup: null,
+      spinner: 0,
+      picker: 0,
+      picksInPool: 0,
+      finished: false
+    };
+  }
+
   function rosterCount() {
     return Object.keys(roster.hitters).length + Object.values(roster.pitchers).filter(Boolean).length;
   }
@@ -551,7 +579,7 @@ ${info}
   }
 
   function showView(viewId) {
-    ["homeView", "gameView", "queryView"].forEach(id => {
+    ["homeView", "gameView", "queryView", "versusView"].forEach(id => {
       document.getElementById(id).hidden = id !== viewId;
     });
   }
@@ -959,6 +987,460 @@ ${info}
     }
   }
 
+  function versusTeamPlayers(team) {
+    return [
+      ...Object.values(team.hitters),
+      ...Object.values(team.pitchers)
+    ].filter(Boolean);
+  }
+
+  function versusPlayerLabel(teamIndex) {
+    return teamIndex === 0 ? "玩家1" : "玩家2";
+  }
+
+  function versusAllPlayers() {
+    return versusState.teams.flatMap(versusTeamPlayers);
+  }
+
+  function versusTeamCount(team) {
+    return versusTeamPlayers(team).length;
+  }
+
+  function isVersusPlayerDrafted(player) {
+    const name = normalizePlayerName(player.name);
+    return versusAllPlayers().some(drafted =>
+      drafted.id === player.id || normalizePlayerName(drafted.name) === name
+    );
+  }
+
+  function versusTeamCardCounts(team) {
+    const counts = { "紫": 0, "紅": 0, "黃": 0, "藍": 0 };
+    versusTeamPlayers(team).forEach(player => counts[player.cardType]++);
+    return counts;
+  }
+
+  function versusCardLimitReached(team, player) {
+    const limits = {
+      minor: { purple: 2, elite: 10 },
+      amateur: { purple: 1, elite: 6 },
+      free: null
+    }[versusState.mode];
+    if (!limits) {
+      return false;
+    }
+    const counts = versusTeamCardCounts(team);
+    return (player.cardType === "紫" && counts["紫"] >= limits.purple) ||
+      ((player.cardType === "紫" || player.cardType === "紅") && counts["紫"] + counts["紅"] >= limits.elite);
+  }
+
+  function getVersusSlots(team, player) {
+    if (player.type === "pitcher") {
+      return versusPitcherSlots.filter(slot => slot.startsWith(player.role) && !team.pitchers[slot]);
+    }
+
+    const positionSlots = versusHitterSlots.filter(slot =>
+      slot !== "DH" &&
+      !team.hitters[slot] &&
+      player.positions.includes(slotGroup(slot))
+    );
+    if (!team.hitters.DH) {
+      positionSlots.push("DH");
+    }
+    return positionSlots;
+  }
+
+  function isVersusPlayerAvailable(player, teamIndex = versusState.picker) {
+    const team = versusState.teams[teamIndex];
+    return !versusState.finished &&
+      !isVersusPlayerDrafted(player) &&
+      !versusCardLimitReached(team, player) &&
+      getVersusSlots(team, player).length > 0;
+  }
+
+  function getVersusSuitablePools(teamIndex) {
+    return TEAMS.filter(pool => pool.players.some(player => isVersusPlayerAvailable(player, teamIndex)));
+  }
+
+  function ensureVersusPickerHasChoices() {
+    const hasChoice = versusState.currentPool?.players.some(player => isVersusPlayerAvailable(player));
+    if (hasChoice) {
+      return true;
+    }
+
+    const suitablePools = getVersusSuitablePools(versusState.picker);
+    if (!suitablePools.length) {
+      return false;
+    }
+    versusState.currentPool = randomPool(suitablePools);
+    return true;
+  }
+
+  function versusPlayerCard(player) {
+    const unavailable = !isVersusPlayerAvailable(player);
+    const selected = versusState.pendingPlayerId === player.id;
+    return `
+      <div class="player ${selected ? "selected" : ""} ${unavailable ? "unavailable" : ""}" onclick="versusPickPlayer('${player.id}')">
+        <b class="player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}</b>
+        <span class="badge position-badge ${unavailable ? "unavailable" : ""}">${player.type === "hitter" ? formatHitterPositions(player.positions) : player.role}</span>
+        ${renderPlayerStats(player, unavailable ? "stats unavailable" : "stats")}
+      </div>
+    `;
+  }
+
+  function versusAverageStats(players, stats) {
+    if (!players.length) {
+      return Object.fromEntries(stats.map(stat => [stat, 0]));
+    }
+    return Object.fromEntries(stats.map(stat => [
+      stat,
+      Math.round(players.reduce((sum, player) => sum + player[stat], 0) / players.length)
+    ]));
+  }
+
+  function versusAverageClass(value) {
+    if (value > 91) return "average-purple";
+    if (value > 80) return "average-red";
+    return "";
+  }
+
+  function renderVersusAverages(items) {
+    return `<span class="versus-averages">${items.map(([label, value]) =>
+      `<span>${label}<strong class="${versusAverageClass(value)}">${value || "-"}</strong></span>`
+    ).join("")}</span>`;
+  }
+
+  function renderVersusRoster(teamIndex) {
+    const team = versusState.teams[teamIndex];
+    const counts = versusTeamCardCounts(team);
+    const limits = {
+      minor: { purple: 2, elite: 10 },
+      amateur: { purple: 1, elite: 6 },
+      free: null
+    }[versusState.mode];
+    document.getElementById(`versusCounts${teamIndex + 1}`).innerHTML = `
+      <span class="card-count card-purple">${counts["紫"]}</span>
+      <span class="card-count card-red">${counts["紅"]}</span>
+      <span class="card-count card-yellow">${counts["黃"]}</span>
+      <span class="card-count card-blue">${counts["藍"]}</span>
+      ${limits ? `<span class="versus-elite-limit">紅紫 ${counts["紫"] + counts["紅"]}/${limits.elite}</span>` : ""}
+    `;
+    const pendingPlayer = versusState.currentPool?.players.find(player => player.id === versusState.pendingPlayerId);
+    const availableSlots = pendingPlayer && versusState.picker === teamIndex ? getVersusSlots(team, pendingPlayer) : [];
+    const hitterPlayers = Object.values(team.hitters).filter(Boolean);
+    const pitcherPlayers = Object.values(team.pitchers).filter(Boolean);
+    const hitterAverages = versusAverageStats(hitterPlayers, ["power", "contact", "speed", "fielding", "arm"]);
+    const pitcherAverages = versusAverageStats(pitcherPlayers, ["stamina", "control", "velocity", "breaking"]);
+    const hitterRows = team.lineup.map((slot, orderIndex) => {
+      const player = team.hitters[slot];
+      const canPlace = availableSlots.includes(slot);
+      return `
+        <div class="versus-roster-row ${player ? "lineup-draggable" : ""} ${canPlace ? "placeable" : ""}"
+          draggable="${Boolean(player)}"
+          ondragstart="startVersusLineupDrag(${teamIndex},${orderIndex})"
+          ondragover="allowVersusLineupDrop(event)"
+          ondrop="dropVersusLineup(${teamIndex},${orderIndex})"
+          onclick="${canPlace ? `placeVersusPlayer('${slot}')` : ""}">
+          <span class="slot">${orderIndex + 1}. ${slotGroup(slot)}</span>
+          <span class="versus-roster-player ${player ? cardTypeClass(player.cardType) : ""}">${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace ? "可放入" : "尚未選擇"}</span>
+          ${player ? `<div class="versus-roster-tooltip">${renderPlayerStats(player, "stats stats-grid")}</div>` : ""}
+          <span class="drag-handle">${player ? "⋮⋮" : ""}</span>
+        </div>
+      `;
+    }).join("");
+
+    const pitcherRows = versusPitcherSlots.map(slot => {
+      const player = team.pitchers[slot];
+      const canPlace = availableSlots.includes(slot);
+      return `
+        <div class="versus-roster-row ${canPlace ? "placeable" : ""}" onclick="${canPlace ? `placeVersusPlayer('${slot}')` : ""}">
+          <span class="slot">${slot}</span>
+          <span class="versus-roster-player ${player ? cardTypeClass(player.cardType) : ""}">${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace ? "可放入" : "尚未選擇"}</span>
+          ${player ? `<div class="versus-roster-tooltip">${renderPlayerStats(player, "stats stats-grid")}</div>` : ""}
+          <span></span>
+        </div>
+      `;
+    }).join("");
+
+    document.getElementById(`versusRoster${teamIndex + 1}`).innerHTML = `
+      <div class="versus-roster-section">
+        <h3>打者與棒次 ${renderVersusAverages([["力量", hitterAverages.power], ["打擊", hitterAverages.contact], ["速度", hitterAverages.speed], ["守備", hitterAverages.fielding], ["傳球", hitterAverages.arm]])}</h3>
+        <div class="versus-roster-list">${hitterRows}</div>
+      </div>
+      <div class="versus-roster-section">
+        <h3>投手群 ${renderVersusAverages([["體力", pitcherAverages.stamina], ["控球", pitcherAverages.control], ["球威", pitcherAverages.velocity], ["變化", pitcherAverages.breaking]])}</h3>
+        <div class="versus-roster-list">${pitcherRows}</div>
+      </div>
+      <div class="simulation-note">${versusTeamCount(team)} / ${config.rosterLimits.total}</div>
+    `;
+  }
+
+  function renderVersusMode() {
+    renderVersusRoster(0);
+    renderVersusRoster(1);
+
+    document.getElementById("versusTeam1").classList.toggle("active", !versusState.finished && versusState.picker === 0);
+    document.getElementById("versusTeam2").classList.toggle("active", !versusState.finished && versusState.picker === 1);
+    document.getElementById("versusStatus").textContent = versusState.finished
+      ? "雙方選秀完成，可調整棒次後模擬三戰兩勝"
+      : `目前由${versusPlayerLabel(versusState.picker)}${versusState.currentPool ? "選擇一位球員" : "按下 SPIN"}`;
+
+    const spinButton = document.getElementById("versusSpinButton");
+    spinButton.disabled = versusState.finished || Boolean(versusState.currentPool);
+    spinButton.textContent = `🎲 ${versusPlayerLabel(versusState.spinner)} SPIN`;
+    document.getElementById("versusSimulateButton").disabled = !versusState.finished;
+    document.getElementById("versusModeSelect").disabled = Boolean(versusState.currentPool) || versusAllPlayers().length > 0;
+
+    document.getElementById("versusPoolInfo").textContent = versusState.currentPool
+      ? `${versusState.currentPool.year} ${versusState.currentPool.team}｜${versusPlayerLabel(versusState.picker)}選擇`
+      : versusState.finished ? "選秀完成" : `等待${versusPlayerLabel(versusState.spinner)} SPIN`;
+    document.getElementById("versusPlayers").innerHTML = versusState.currentPool
+      ? versusState.currentPool.players.map(versusPlayerCard).join("")
+      : "";
+  }
+
+  function openVersusMode() {
+    resetVersusMode();
+    startBackgroundMusic();
+    showView("versusView");
+  }
+
+  function resetVersusMode() {
+    const selectedMode = document.getElementById("versusModeSelect")?.value || "free";
+    versusState = createVersusState();
+    versusState.mode = selectedMode;
+    document.getElementById("versusResult").hidden = true;
+    document.getElementById("versusResult").innerHTML = "";
+    renderVersusMode();
+  }
+
+  function versusSpin() {
+    if (versusState.finished || versusState.currentPool) {
+      return;
+    }
+    startBackgroundMusic();
+    const suitablePools = getVersusSuitablePools(versusState.spinner);
+    if (!suitablePools.length) {
+      alert("目前找不到符合空缺守位的球員，請重新對戰。");
+      return;
+    }
+    versusState.currentPool = randomPool(suitablePools);
+    versusState.picker = versusState.spinner;
+    versusState.picksInPool = 0;
+    renderVersusMode();
+  }
+
+  function versusPickPlayer(playerId) {
+    const player = versusState.currentPool?.players.find(candidate => candidate.id === playerId);
+    if (!player || !isVersusPlayerAvailable(player)) {
+      return;
+    }
+
+    versusState.pendingPlayerId = versusState.pendingPlayerId === playerId ? null : playerId;
+    renderVersusMode();
+  }
+
+  function placeVersusPlayer(slot) {
+    const player = versusState.currentPool?.players.find(candidate => candidate.id === versusState.pendingPlayerId);
+    if (!player || !isVersusPlayerAvailable(player) || !getVersusSlots(versusState.teams[versusState.picker], player).includes(slot)) {
+      return;
+    }
+    const team = versusState.teams[versusState.picker];
+    if (player.type === "hitter") {
+      team.hitters[slot] = player;
+    } else {
+      team.pitchers[slot] = player;
+    }
+
+    versusState.pendingPlayerId = null;
+    versusState.picksInPool++;
+    if (versusState.teams.every(candidate => versusTeamCount(candidate) >= config.rosterLimits.total)) {
+      versusState.finished = true;
+      versusState.currentPool = null;
+      alert("雙方選秀完成！請調整棒次後模擬三戰兩勝。");
+    } else if (versusState.picksInPool === 1) {
+      versusState.picker = 1 - versusState.spinner;
+      if (!ensureVersusPickerHasChoices()) {
+        alert("玩家目前沒有可補入空缺守位的球員，請重新對戰。");
+      }
+    } else {
+      versusState.spinner = 1 - versusState.spinner;
+      versusState.picker = versusState.spinner;
+      versusState.currentPool = null;
+      versusState.pendingPlayerId = null;
+      versusState.picksInPool = 0;
+    }
+    renderVersusMode();
+  }
+
+  function startVersusLineupDrag(teamIndex, orderIndex) {
+    versusState.draggedLineup = { teamIndex, orderIndex };
+  }
+
+  function allowVersusLineupDrop(event) {
+    event.preventDefault();
+  }
+
+  function dropVersusLineup(teamIndex, targetIndex) {
+    const dragged = versusState.draggedLineup;
+    if (!dragged || dragged.teamIndex !== teamIndex || dragged.orderIndex === targetIndex) {
+      return;
+    }
+    const lineup = versusState.teams[teamIndex].lineup;
+    const [slot] = lineup.splice(dragged.orderIndex, 1);
+    lineup.splice(targetIndex, 0, slot);
+    versusState.draggedLineup = null;
+    renderVersusMode();
+  }
+
+  function setVersusMode(mode) {
+    if (versusAllPlayers().length > 0 || versusState.currentPool) {
+      return;
+    }
+    versusState.mode = mode;
+    renderVersusMode();
+  }
+
+  function versusOffenseScore(team) {
+    const totalWeight = lineupWeights.reduce((sum, weight) => sum + weight, 0);
+    return team.lineup.reduce((sum, slot, index) => {
+      return sum + hitterScore(team.hitters[slot], slot) * lineupWeights[index];
+    }, 0) / totalWeight;
+  }
+
+  function versusPitchingScore(team, gameIndex) {
+    const starter = team.pitchers[`SP${gameIndex + 1}`];
+    const bullpen = ["RP1", "RP2", "CP1", "CP2"].map(slot => team.pitchers[slot]);
+    const bullpenAverage = bullpen.reduce((sum, player) => sum + pitcherScore(player), 0) / bullpen.length;
+    return pitcherScore(starter) * 0.65 + bullpenAverage * 0.35;
+  }
+
+  function simulateInnings(expectedRuns) {
+    const innings = [];
+    const inningRate = Math.max(0.08, expectedRuns / 9);
+    for (let inning = 0; inning < 9; inning++) {
+      let runs = 0;
+      if (Math.random() < Math.min(0.75, inningRate * 0.8)) runs++;
+      if (Math.random() < Math.min(0.35, inningRate * 0.28)) runs++;
+      if (Math.random() < Math.min(0.16, inningRate * 0.12)) runs++;
+      innings.push(runs);
+    }
+    return innings;
+  }
+
+  function sumInnings(innings) {
+    return innings.reduce((sum, runs) => sum + runs, 0);
+  }
+
+  function renderVersusGame(game) {
+    const teams = [game.away, game.home];
+    const inningHeaders = Array.from({ length: 9 }, (_, index) => `<th>${index + 1}</th>`).join("");
+    const rows = teams.map(teamIndex => {
+      const innings = game.innings[teamIndex];
+      return `
+        <tr>
+          <td class="team-cell">${versusPlayerLabel(teamIndex)}${teamIndex === game.away ? "（先攻）" : "（後攻）"}</td>
+          ${innings.map(runs => `<td>${runs}</td>`).join("")}
+          <td>${game.runs[teamIndex]}</td>
+          <td>${game.hits[teamIndex]}</td>
+          <td>${game.errors[teamIndex]}</td>
+        </tr>
+      `;
+    }).join("");
+    return `
+      <div class="versus-game-result">
+        <div class="versus-game-heading">
+          <h3>第${game.game}戰｜SP${game.game}</h3>
+          <div class="game-awards">
+            <span>勝投：${game.awards.winningPitcher}</span>
+            <span>敗投：${game.awards.losingPitcher}</span>
+            <span>救援：${game.awards.savePitcher || "無"}</span>
+            <span>全壘打：${game.awards.homeRuns.length ? game.awards.homeRuns.join("、") : "無"}</span>
+            <span class="mvp-award">MVP：${game.awards.mvp.name}｜${game.awards.mvp.stats}</span>
+          </div>
+        </div>
+        <table class="scoreboard">
+          <thead><tr><th>TEAM</th>${inningHeaders}<th>R</th><th>H</th><th>E</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="versus-outcome">
+          <div class="${game.winner === 0 ? "win" : "lose"}">玩家1<br>${game.winner === 0 ? "WIN" : "LOSE"}</div>
+          <div class="${game.winner === 1 ? "win" : "lose"}">玩家2<br>${game.winner === 1 ? "WIN" : "LOSE"}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function simulateVersusSeries() {
+    if (!versusState.finished) {
+      return;
+    }
+
+    const offenses = versusState.teams.map(versusOffenseScore);
+    const wins = [0, 0];
+    const games = [];
+    for (let gameIndex = 0; gameIndex < 3 && Math.max(...wins) < 2; gameIndex++) {
+      const home = Math.random() < 0.5 ? 0 : 1;
+      const away = 1 - home;
+      const pitching = versusState.teams.map(team => versusPitchingScore(team, gameIndex));
+      const innings = [
+        simulateInnings(4.5 + (offenses[0] - pitching[1]) / 7),
+        simulateInnings(4.5 + (offenses[1] - pitching[0]) / 7)
+      ];
+      const runs = innings.map(sumInnings);
+      while (runs[0] === runs[1]) {
+        const winner = Math.random() < 0.5 ? 0 : 1;
+        innings[winner][8]++;
+        runs[winner]++;
+      }
+      const winner = runs[0] > runs[1] ? 0 : 1;
+      const hits = runs.map(runTotal => runTotal + rand(3, 9));
+      const errors = [rand(0, 2), rand(0, 2)];
+      const loser = 1 - winner;
+      const winningStarter = versusState.teams[winner].pitchers[`SP${gameIndex + 1}`];
+      const losingStarter = versusState.teams[loser].pitchers[`SP${gameIndex + 1}`];
+      const savePitcher = runs[winner] - runs[loser] <= 3 ? versusState.teams[winner].pitchers.CP1 : null;
+      const hitterPerformances = versusState.teams.flatMap((team, teamIndex) =>
+        team.lineup.map(slot => {
+          const player = team.hitters[slot];
+          const atBats = rand(3, 5);
+          const playerHits = Math.min(atBats, rand(0, Math.max(1, Math.round(playerOverall(player) / 25))));
+          const homeRuns = Math.random() < Math.max(0.04, (player.power - 65) / 180) ? 1 : 0;
+          const rbi = Math.max(homeRuns, rand(0, Math.min(4, runs[teamIndex] + 1)));
+          return { player, teamIndex, atBats, hits: playerHits, homeRuns, rbi };
+        })
+      );
+      const homeRuns = hitterPerformances
+        .filter(performance => performance.homeRuns > 0)
+        .map(performance => `${versusPlayerLabel(performance.teamIndex)} ${performance.player.name}`);
+      const mvp = hitterPerformances
+        .filter(performance => performance.teamIndex === winner)
+        .sort((left, right) =>
+          (right.homeRuns * 5 + right.rbi * 2 + right.hits) -
+          (left.homeRuns * 5 + left.rbi * 2 + left.hits)
+        )[0];
+      const awards = {
+        winningPitcher: `${versusPlayerLabel(winner)} ${winningStarter.name}`,
+        losingPitcher: `${versusPlayerLabel(loser)} ${losingStarter.name}`,
+        savePitcher: savePitcher ? `${versusPlayerLabel(winner)} ${savePitcher.name}` : "",
+        homeRuns,
+        mvp: {
+          name: `${versusPlayerLabel(winner)} ${mvp.player.name}`,
+          stats: `${mvp.atBats}打數 ${mvp.hits}安打 ${mvp.homeRuns}全壘打 ${mvp.rbi}打點`
+        }
+      };
+      wins[winner]++;
+      games.push({ game: gameIndex + 1, home, away, innings, runs, hits, errors, winner, awards });
+    }
+
+    const champion = wins[0] > wins[1] ? 0 : 1;
+    document.getElementById("versusResult").hidden = false;
+    document.getElementById("versusResult").innerHTML = `
+      <h2>${versusPlayerLabel(champion)}獲勝｜系列賽 ${wins[0]}-${wins[1]}</h2>
+      ${games.map(renderVersusGame).join("")}
+      <div class="simulation-note">雙方先後攻每場隨機；第 1 至第 3 戰依序使用 SP1、SP2、SP3。</div>
+    `;
+  }
+
   window.selectPlayer = selectPlayer;
   window.addSelectedToSlot = addSelectedToSlot;
   window.spinTeam = spinTeam;
@@ -975,6 +1457,16 @@ ${info}
   window.setQueryPlayerFilter = setQueryPlayerFilter;
   window.remakeDraft = remakeDraft;
   window.simulateSeason = simulateSeason;
+  window.openVersusMode = openVersusMode;
+  window.resetVersusMode = resetVersusMode;
+  window.versusSpin = versusSpin;
+  window.versusPickPlayer = versusPickPlayer;
+  window.placeVersusPlayer = placeVersusPlayer;
+  window.startVersusLineupDrag = startVersusLineupDrag;
+  window.allowVersusLineupDrop = allowVersusLineupDrop;
+  window.dropVersusLineup = dropVersusLineup;
+  window.simulateVersusSeries = simulateVersusSeries;
+  window.setVersusMode = setVersusMode;
 
   renderRoster();
   renderPlayers();

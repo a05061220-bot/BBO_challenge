@@ -99,9 +99,9 @@ window.DraftConfig = {
     hitterTeamWeight: 0.6,
     pitcherTeamWeight: 0.4,
     leagueAverageScores: {
-      amateur: 52,
-      minor: 57,
-      free: 63
+      amateur: 55,
+      minor: 61,
+      free: 67
     },
     scoreScale: 20,
     strengthPerGame: 0.5
