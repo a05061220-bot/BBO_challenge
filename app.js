@@ -166,6 +166,7 @@
     if (raw.type === "hitter") {
       return {
         id: raw.id || `import-h-${index}`,
+        league: raw.league || "CPBL",
         type: "hitter",
         name: raw.name || "未命名",
         team: raw.team || "未知球隊",
@@ -185,6 +186,7 @@
 
     return {
       id: raw.id || `import-p-${index}`,
+      league: raw.league || "CPBL",
       type: "pitcher",
       name: raw.name || "未命名",
       team: raw.team || "未知球隊",
@@ -212,9 +214,10 @@
         return;
       }
 
-      const poolKey = `${player.team}::${player.year}`;
+      const poolKey = `${player.league}::${player.team}::${player.year}`;
       if (!pools.has(poolKey)) {
         pools.set(poolKey, {
+          league: player.league,
           team: player.team,
           year: player.year,
           players: []
@@ -282,6 +285,7 @@
     for (const year of config.years) {
       for (const team of config.teams) {
         teams.push({
+          league: "CPBL",
           team,
           year,
           players: generateTeamRoster(team, year)
@@ -295,11 +299,14 @@
   const importedDraft = Array.isArray(window.BBOImportedDraft) ? window.BBOImportedDraft : [];
   const TEAMS = importedDraft.length ? buildDraftPoolsFromImported(importedDraft) : buildFallbackPools();
 
+  let gameMode = "minor";
+  let queryPlayerFilter = "all";
   let currentPool = null;
   let selectedPlayerId = null;
   let draftStarted = false;
   let playerPickedThisRound = false;
-  let rerollUsed = false;
+  let yearRerollUsed = false;
+  let teamRerollUsed = false;
   let playerFilter = "all";
   let roundPicks = {
     hitters: 0,
@@ -323,6 +330,17 @@
     return Object.keys(roster.hitters).length + Object.values(roster.pitchers).filter(Boolean).length;
   }
 
+  function rosterPlayers() {
+    return [
+      ...Object.values(roster.hitters),
+      ...Object.values(roster.pitchers)
+    ].filter(Boolean);
+  }
+
+  function normalizePlayerName(name) {
+    return String(name || "").trim().toLocaleLowerCase("zh-Hant");
+  }
+
   function getSelectedPlayer() {
     if (!currentPool || !selectedPlayerId) {
       return null;
@@ -331,37 +349,25 @@
     return currentPool.players.find(player => player.id === selectedPlayerId) || null;
   }
 
-  function isPlayerAlreadyOnRoster(playerId) {
-    return Object.values(roster.hitters).some(player => player?.id === playerId) ||
-      Object.values(roster.pitchers).some(player => player?.id === playerId);
+  function isPlayerAlreadyOnRoster(player) {
+    const normalizedName = normalizePlayerName(player.name);
+    return rosterPlayers().some(rosterPlayer =>
+      rosterPlayer.id === player.id ||
+      normalizePlayerName(rosterPlayer.name) === normalizedName
+    );
   }
 
   function eliteRosterCount() {
-    const players = [
-      ...Object.values(roster.hitters),
-      ...Object.values(roster.pitchers)
-    ].filter(Boolean);
-
-    return players.filter(player => player.cardType === "紅" || player.cardType === "紫").length;
+    return rosterPlayers().filter(player => player.cardType === "紅" || player.cardType === "紫").length;
   }
 
   function purpleRosterCount() {
-    const players = [
-      ...Object.values(roster.hitters),
-      ...Object.values(roster.pitchers)
-    ].filter(Boolean);
-
-    return players.filter(player => player.cardType === "紫").length;
+    return rosterPlayers().filter(player => player.cardType === "紫").length;
   }
 
   function rosterCardTypeCounts() {
     const counts = { "紫": 0, "紅": 0, "黃": 0, "藍": 0 };
-    const players = [
-      ...Object.values(roster.hitters),
-      ...Object.values(roster.pitchers)
-    ].filter(Boolean);
-
-    players.forEach(player => {
+    rosterPlayers().forEach(player => {
       if (Object.hasOwn(counts, player.cardType)) {
         counts[player.cardType]++;
       }
@@ -380,8 +386,8 @@
 
   function updateRerollButtons() {
     const canReroll = draftStarted && rosterCount() < config.rosterLimits.total;
-    document.getElementById("rerollYearButton").disabled = !canReroll || rerollUsed;
-    document.getElementById("rerollTeamButton").disabled = !canReroll || rerollUsed;
+    document.getElementById("rerollYearButton").disabled = !canReroll || yearRerollUsed;
+    document.getElementById("rerollTeamButton").disabled = !canReroll || teamRerollUsed;
   }
 
   function showCurrentPool() {
@@ -395,14 +401,18 @@
 
   function updateRoundInfo() {
     const counts = rosterCardTypeCounts();
+    const limits = getModeCardLimits();
+    const limitInfo = limits
+      ? `<span class="elite-count">紅紫 ${counts["紫"] + counts["紅"]}/${limits.elite}</span>`
+      : `<span class="elite-count">自由頻道：卡色不限</span>`;
     document.getElementById("selectionInfo").innerHTML = `
       <span>本輪已選：打者 ${roundPicks.hitters} / ${config.roundLimits.hitters}，投手 ${roundPicks.pitchers} / ${config.roundLimits.pitchers}</span>
-      <span class="card-counts" title="紫卡最多2位；紅卡與紫卡合計最多10位">
+      <span class="card-counts" title="${limits ? `紫卡最多${limits.purple}位；紅卡與紫卡合計最多${limits.elite}位` : "自由頻道卡色數量不限"}">
         <span class="card-count card-purple">紫 ${counts["紫"]}</span>
         <span class="card-count card-red">紅 ${counts["紅"]}</span>
         <span class="card-count card-yellow">黃 ${counts["黃"]}</span>
         <span class="card-count card-blue">藍 ${counts["藍"]}</span>
-        <span class="elite-count">紅紫 ${counts["紫"] + counts["紅"]}/10</span>
+        ${limitInfo}
       </span>
     `;
   }
@@ -428,12 +438,13 @@
   }
 
   function getAvailableRosterSlotsForPlayer(player) {
-    const eliteLimitReached =
+    const limits = getModeCardLimits();
+    const eliteLimitReached = limits &&
       (player.cardType === "紅" || player.cardType === "紫") &&
-      eliteRosterCount() >= 10;
-    const purpleLimitReached = player.cardType === "紫" && purpleRosterCount() >= 2;
+      eliteRosterCount() >= limits.elite;
+    const purpleLimitReached = limits && player.cardType === "紫" && purpleRosterCount() >= limits.purple;
 
-    if (isPlayerAlreadyOnRoster(player.id) || isRoundLimitReached(player) || eliteLimitReached || purpleLimitReached) {
+    if (isPlayerAlreadyOnRoster(player) || isRoundLimitReached(player) || eliteLimitReached || purpleLimitReached) {
       return [];
     }
 
@@ -539,6 +550,98 @@ ${info}
     renderPlayers();
   }
 
+  function showView(viewId) {
+    ["homeView", "gameView", "queryView"].forEach(id => {
+      document.getElementById(id).hidden = id !== viewId;
+    });
+  }
+
+  function enterGame(mode) {
+    gameMode = mode;
+    document.getElementById("gameModeTitle").textContent = {
+      minor: "職業二軍頻道",
+      amateur: "業餘頻道",
+      free: "自由頻道"
+    }[mode];
+    remakeDraft();
+    showView("gameView");
+  }
+
+  function showHome() {
+    showView("homeView");
+  }
+
+  function getModeCardLimits() {
+    return {
+      minor: { purple: 2, elite: 10 },
+      amateur: { purple: 1, elite: 6 },
+      free: null
+    }[gameMode];
+  }
+
+  function populateQueryYears() {
+    const league = document.getElementById("queryLeague").value;
+    const yearSelect = document.getElementById("queryYear");
+    const years = [...new Set(TEAMS.filter(pool => pool.league === league).map(pool => pool.year))]
+      .sort((left, right) => right - left);
+    yearSelect.innerHTML = years.map(year => `<option value="${year}">${year}</option>`).join("");
+    yearSelect.disabled = years.length === 0;
+    populateQueryTeams();
+  }
+
+  function populateQueryTeams() {
+    const league = document.getElementById("queryLeague").value;
+    const year = Number(document.getElementById("queryYear").value);
+    const teamSelect = document.getElementById("queryTeam");
+    const teams = TEAMS
+      .filter(pool => pool.league === league && pool.year === year)
+      .map(pool => pool.team)
+      .sort((left, right) => left.localeCompare(right, "zh-Hant"));
+    teamSelect.innerHTML = teams.map(team => `<option value="${team}">${team}</option>`).join("");
+    teamSelect.disabled = teams.length === 0;
+    renderPlayerQuery();
+  }
+
+  function renderPlayerQuery() {
+    const league = document.getElementById("queryLeague").value;
+    const year = Number(document.getElementById("queryYear").value);
+    const team = document.getElementById("queryTeam").value;
+    const pool = TEAMS.find(candidate => candidate.league === league && candidate.year === year && candidate.team === team);
+    const players = (pool?.players || []).filter(player => {
+      if (queryPlayerFilter === "hitter") return player.type === "hitter";
+      if (queryPlayerFilter === "pitcher") return player.type === "pitcher";
+      return true;
+    });
+    if (!pool) {
+      document.getElementById("querySummary").textContent =
+        league === "TML" ? "尚未匯入 TML 球員資料" : `${league} 尚無可查詢資料`;
+      document.getElementById("queryResults").innerHTML = "";
+      return;
+    }
+
+    document.getElementById("querySummary").textContent = `${league} ${year} ${team}，顯示 ${players.length} 位球員`;
+    document.getElementById("queryResults").innerHTML = players.map(player => `
+      <div class="player query-player">
+        <b class="player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}</b>
+        <span class="badge position-badge">${player.type === "hitter" ? formatHitterPositions(player.positions) : player.role}</span>
+        ${renderPlayerStats(player, "stats stats-grid")}
+      </div>
+    `).join("");
+  }
+
+  function setQueryPlayerFilter(filter) {
+    queryPlayerFilter = filter;
+    document.querySelectorAll("[data-query-filter]").forEach(button => {
+      button.classList.toggle("active", button.dataset.queryFilter === filter);
+    });
+    renderPlayerQuery();
+  }
+
+  function openPlayerQuery() {
+    showView("queryView");
+    populateQueryYears();
+  }
+
   function showDraftPanel() {
     document.getElementById("draftPanel").hidden = false;
     document.getElementById("simulationPanel").hidden = true;
@@ -602,18 +705,19 @@ ${info}
       return;
     }
 
-    if (isPlayerAlreadyOnRoster(player.id)) {
-      alert("這位球員已經在你的陣容裡了");
+    if (isPlayerAlreadyOnRoster(player)) {
+      alert("這位球員的其他年度卡片已經在你的陣容裡了");
       return;
     }
 
-    if ((player.cardType === "紅" || player.cardType === "紫") && eliteRosterCount() >= 10) {
-      alert("選秀陣容中的紅卡與紫卡合計最多10位");
+    const limits = getModeCardLimits();
+    if (limits && (player.cardType === "紅" || player.cardType === "紫") && eliteRosterCount() >= limits.elite) {
+      alert(`選秀陣容中的紅卡與紫卡合計最多${limits.elite}位`);
       return;
     }
 
-    if (player.cardType === "紫" && purpleRosterCount() >= 2) {
-      alert("選秀陣容中的紫卡最多2位");
+    if (limits && player.cardType === "紫" && purpleRosterCount() >= limits.purple) {
+      alert(`選秀陣容中的紫卡最多${limits.purple}位`);
       return;
     }
 
@@ -661,7 +765,8 @@ ${info}
     updateRoundInfo();
 
     if (rosterCount() >= config.rosterLimits.total) {
-      alert("選秀完成！");
+      alert("選秀完成！即將自動模擬 120 場球季。");
+      simulateSeason();
     }
   }
 
@@ -690,34 +795,42 @@ ${info}
   }
 
   function rerollYear() {
-    if (!draftStarted || rerollUsed) {
+    if (!draftStarted || yearRerollUsed) {
       return;
     }
 
-    const alternatives = TEAMS.filter(pool => pool.team === currentPool.team && pool.year !== currentPool.year);
+    const alternatives = TEAMS.filter(pool =>
+      pool.league === currentPool.league &&
+      pool.team === currentPool.team &&
+      pool.year !== currentPool.year
+    );
     if (!alternatives.length) {
       alert("這支球隊沒有其他可抽選年份");
       return;
     }
 
     currentPool = randomPool(alternatives);
-    rerollUsed = true;
+    yearRerollUsed = true;
     showCurrentPool();
   }
 
   function rerollTeam() {
-    if (!draftStarted || rerollUsed) {
+    if (!draftStarted || teamRerollUsed) {
       return;
     }
 
-    const alternatives = TEAMS.filter(pool => pool.year === currentPool.year && pool.team !== currentPool.team);
+    const alternatives = TEAMS.filter(pool =>
+      pool.league === currentPool.league &&
+      pool.year === currentPool.year &&
+      pool.team !== currentPool.team
+    );
     if (!alternatives.length) {
       alert("這個年份沒有其他可抽選球隊");
       return;
     }
 
     currentPool = randomPool(alternatives);
-    rerollUsed = true;
+    teamRerollUsed = true;
     showCurrentPool();
   }
 
@@ -726,7 +839,8 @@ ${info}
     selectedPlayerId = null;
     draftStarted = false;
     playerPickedThisRound = false;
-    rerollUsed = false;
+    yearRerollUsed = false;
+    teamRerollUsed = false;
     roundPicks = {
       hitters: 0,
       pitchers: 0
@@ -754,89 +868,95 @@ ${info}
   }
 
   function hitterScore(player, slotKey) {
-    const weights = config.seasonWeights;
+    const position = slotGroup(slotKey);
+    const weights = config.seasonWeights.hitters[position];
 
-    if (slotKey === "DH") {
-      return (
-        player.power * weights.dhPower +
-        player.contact * weights.dhContact +
-        player.speed * weights.dhSpeed
-      );
+    if (!weights) {
+      throw new Error(`找不到打者守位 ${position} 的模擬權重`);
     }
 
     return (
-      player.power * weights.hitterPower +
-      player.contact * weights.hitterContact +
-      player.speed * weights.hitterSpeed +
-      player.fielding * weights.hitterFielding +
-      player.arm * weights.hitterArm
+      player.power * weights.power +
+      player.contact * weights.contact +
+      player.speed * weights.speed +
+      player.fielding * weights.fielding +
+      player.arm * weights.arm
     );
   }
 
   function pitcherScore(player) {
-    const weights = config.seasonWeights;
+    const weights = config.seasonWeights.pitchers[player.role];
+
+    if (!weights) {
+      throw new Error(`找不到投手角色 ${player.role} 的模擬權重`);
+    }
 
     return (
-      player.velocity * weights.pitcherVelocity +
-      player.control * weights.pitcherControl +
-      player.stamina * weights.pitcherStamina +
-      player.breaking * weights.pitcherBreaking
+      player.velocity * weights.velocity +
+      player.control * weights.control +
+      player.stamina * weights.stamina +
+      player.breaking * weights.breaking
     );
   }
 
   function simulateSeason() {
-    const hitterEntries = Object.entries(roster.hitters);
-    const hitters = hitterEntries.map(([, player]) => player);
-    const pitcherEntries = Object.entries(roster.pitchers).filter(([, player]) => Boolean(player));
-    const pitchers = pitcherEntries.map(([, player]) => player);
+    try {
+      const hitterEntries = Object.entries(roster.hitters);
+      const hitters = hitterEntries.map(([, player]) => player);
+      const pitcherEntries = Object.entries(roster.pitchers).filter(([, player]) => Boolean(player));
+      const pitchers = pitcherEntries.map(([, player]) => player);
 
-    if (hitters.length < config.rosterLimits.hitters) {
-      alert("野手未滿9位");
-      return;
+      if (hitters.length < config.rosterLimits.hitters) {
+        alert("野手未滿9位");
+        return;
+      }
+
+      if (pitchers.length < config.rosterLimits.pitchers) {
+        alert("投手未滿7位");
+        return;
+      }
+
+      const hAvg = hitterEntries.reduce((sum, [slotKey, player]) => sum + hitterScore(player, slotKey), 0) / hitterEntries.length;
+      const pAvg = pitchers.reduce((sum, player) => sum + pitcherScore(player), 0) / pitchers.length;
+      const simulation = config.simulation;
+      const score = hAvg * simulation.hitterTeamWeight + pAvg * simulation.pitcherTeamWeight;
+
+      const leagueAverageScore = simulation.leagueAverageScores[gameMode];
+      const projectedGameStrength = (score - leagueAverageScore) / simulation.scoreScale;
+      const winRate = Math.max(0, Math.min(1, 0.5 + projectedGameStrength * simulation.strengthPerGame));
+      const wins = Math.round(winRate * simulation.games);
+      const losses = simulation.games - wins;
+      const scoreDiff = score - leagueAverageScore;
+
+      let grade = "D";
+      if (wins === 120) grade = "S";
+      else if (wins >= 110) grade = "A+";
+      else if (wins >= 100) grade = "A";
+      else if (wins >= 90) grade = "B";
+      else if (wins >= 80) grade = "C";
+
+      document.getElementById("result").innerHTML = `${wins}-${losses}<br>${grade}`;
+      document.getElementById("selectionInfo").innerHTML = `
+        <div class="comparison-info">
+          比較基準：聯盟平均隊伍<br>
+          你的隊伍分數 ${score.toFixed(1)} vs 聯盟平均 ${leagueAverageScore.toFixed(1)}<br>
+          差距 ${scoreDiff >= 0 ? "+" : ""}${scoreDiff.toFixed(1)}，換算成 120 場勝場。
+        </div>
+      `;
+      showSimulationPanel({
+        wins,
+        losses,
+        grade,
+        score,
+        leagueAverageScore,
+        scoreDiff,
+        hitterEntries,
+        pitcherEntries
+      });
+    } catch (error) {
+      console.error("模擬球季失敗", error);
+      alert(`模擬球季失敗：${error.message}`);
     }
-
-    if (pitchers.length < config.rosterLimits.pitchers) {
-      alert("投手未滿7位");
-      return;
-    }
-
-    const hAvg = hitterEntries.reduce((sum, [slotKey, player]) => sum + hitterScore(player, slotKey), 0) / hitterEntries.length;
-    const pAvg = pitchers.reduce((sum, player) => sum + pitcherScore(player), 0) / pitchers.length;
-    const score = hAvg * 0.6 + pAvg * 0.4;
-
-    const leagueAverageScore = 74;
-    const leagueStrengthPerGame = 0.5;
-    const projectedGameStrength = (score - leagueAverageScore) / 20;
-    const winRate = Math.max(0, Math.min(1, 0.5 + projectedGameStrength * leagueStrengthPerGame));
-    const wins = Math.round(winRate * 120);
-    const losses = 120 - wins;
-    const scoreDiff = score - leagueAverageScore;
-
-    let grade = "D";
-    if (wins === 120) grade = "S";
-    else if (wins >= 110) grade = "A+";
-    else if (wins >= 100) grade = "A";
-    else if (wins >= 90) grade = "B";
-    else if (wins >= 80) grade = "C";
-
-    document.getElementById("result").innerHTML = `${wins}-${losses}<br>${grade}`;
-    document.getElementById("selectionInfo").innerHTML = `
-      <div class="comparison-info">
-        比較基準：聯盟平均隊伍<br>
-        你的隊伍分數 ${score.toFixed(1)} vs 聯盟平均 ${leagueAverageScore.toFixed(1)}<br>
-        差距 ${scoreDiff >= 0 ? "+" : ""}${scoreDiff.toFixed(1)}，換算成 120 場勝場。
-      </div>
-    `;
-    showSimulationPanel({
-      wins,
-      losses,
-      grade,
-      score,
-      leagueAverageScore,
-      scoreDiff,
-      hitterEntries,
-      pitcherEntries
-    });
   }
 
   window.selectPlayer = selectPlayer;
@@ -847,10 +967,17 @@ ${info}
   window.toggleMusicMute = toggleMusicMute;
   window.skipMusicTrack = skipMusicTrack;
   window.setPlayerFilter = setPlayerFilter;
+  window.enterGame = enterGame;
+  window.showHome = showHome;
+  window.openPlayerQuery = openPlayerQuery;
+  window.populateQueryTeams = populateQueryTeams;
+  window.renderPlayerQuery = renderPlayerQuery;
+  window.setQueryPlayerFilter = setQueryPlayerFilter;
   window.remakeDraft = remakeDraft;
   window.simulateSeason = simulateSeason;
 
   renderRoster();
   renderPlayers();
   updateRerollButtons();
+  showView("homeView");
 })();

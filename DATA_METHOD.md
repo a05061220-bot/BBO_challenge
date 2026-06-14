@@ -3,6 +3,10 @@
 The generated ratings are estimates based on real CPBL season statistics. They are not original
 Netmarble/Joybomb card values.
 
+Players are ranked only against players from the same league, season, and player type. If TML
+data is added, TML and CPBL percentiles, card tiers, and yearly purple-card limits must be
+calculated independently.
+
 ## Source
 
 - Statistics: [ldkrsi/cpbl-opendata](https://github.com/ldkrsi/cpbl-opendata), MIT licensed

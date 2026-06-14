@@ -24,6 +24,17 @@ function Divide {
     return $Numerator / $Denominator
 }
 
+function Normalize-TeamName {
+    param($Value)
+
+    $name = ([string]$Value).Trim()
+    $baseName = ([string][char]0x7D71) + ([string][char]0x4E00)
+    $sevenElevenName = $baseName + '7-ELEVEn'
+    $lionsName = $baseName + ([string][char]0x7345)
+    if ($name -eq $sevenElevenName -or $name -eq $lionsName) { return $baseName }
+    return $name
+}
+
 function Get-PercentileMap {
     param(
         [object[]]$Rows,
@@ -365,8 +376,9 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
         $result.Add([pscustomobject][ordered]@{
             id = "cpbl-$year-$($row.ID)-$($row.'Team ID')-h"
             source = 'cpbl-opendata-derived'
+            league = 'CPBL'
             type = 'hitter'
-            team = $row.'Team Name'
+            team = Normalize-TeamName $row.'Team Name'
             year = $year
             name = $row.Name
             cardType = $cardType
@@ -421,8 +433,9 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
         $result.Add([pscustomobject][ordered]@{
             id = "cpbl-$year-$($row.ID)-$($row.'Team ID')-p"
             source = 'cpbl-opendata-derived'
+            league = 'CPBL'
             type = 'pitcher'
-            team = $row.'Team Name'
+            team = Normalize-TeamName $row.'Team Name'
             year = $year
             name = $row.Name
             cardType = $cardType

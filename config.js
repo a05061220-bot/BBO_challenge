@@ -79,17 +79,31 @@ window.DraftConfig = {
     pitchers: 2
   },
   seasonWeights: {
-    hitterPower: 0.28,
-    hitterContact: 0.28,
-    hitterSpeed: 0.12,
-    hitterFielding: 0.18,
-    hitterArm: 0.14,
-    dhPower: 0.38,
-    dhContact: 0.42,
-    dhSpeed: 0.2,
-    pitcherVelocity: 0.2,
-    pitcherControl: 0.3,
-    pitcherStamina: 0.25,
-    pitcherBreaking: 0.25
+    hitters: {
+      C:  { power: 0.25, contact: 0.25, speed: 0.10, fielding: 0.20, arm: 0.20 },
+      "1B": { power: 0.25, contact: 0.25, speed: 0.15, fielding: 0.25, arm: 0.10 },
+      "2B": { power: 0.25, contact: 0.25, speed: 0.20, fielding: 0.20, arm: 0.10 },
+      "3B": { power: 0.25, contact: 0.25, speed: 0.10, fielding: 0.15, arm: 0.25 },
+      SS: { power: 0.25, contact: 0.25, speed: 0.20, fielding: 0.20, arm: 0.10 },
+      OF: { power: 0.25, contact: 0.25, speed: 0.20, fielding: 0.15, arm: 0.15 },
+      DH: { power: 0.34, contact: 0.34, speed: 0.32, fielding: 0, arm: 0 }
+    },
+    pitchers: {
+      SP: { stamina: 0.30, control: 0.23, velocity: 0.25, breaking: 0.22 },
+      RP: { stamina: 0.15, control: 0.25, velocity: 0.30, breaking: 0.30 },
+      CP: { stamina: 0.10, control: 0.25, velocity: 0.35, breaking: 0.30 }
+    }
+  },
+  simulation: {
+    games: 120,
+    hitterTeamWeight: 0.6,
+    pitcherTeamWeight: 0.4,
+    leagueAverageScores: {
+      amateur: 52,
+      minor: 57,
+      free: 63
+    },
+    scoreScale: 20,
+    strengthPerGame: 0.5
   }
 };
