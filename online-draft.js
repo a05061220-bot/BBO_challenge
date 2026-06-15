@@ -2,6 +2,9 @@
   let auth;
   let db;
   let uid;
+  const playerId = typeof globalThis.crypto?.randomUUID === "function"
+    ? globalThis.crypto.randomUUID().replaceAll("-", "")
+    : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
   let nickname = localStorage.getItem("bbo-online-nickname") || "";
   let mode = "free";
   let playerRef;
@@ -39,7 +42,7 @@
 
   function localTeamIndex() {
     if (!currentMatch) return -1;
-    return currentMatch.player1 === uid ? 0 : 1;
+    return currentMatch.player1 === playerId ? 0 : 1;
   }
 
   function canAct() {
@@ -73,20 +76,21 @@
       await ensureFirebase();
       matching = true;
       setMatchStatus("正在尋找對手...");
-      playerRef = db.ref(`draftPlayers/${uid}`);
-      queueRef = db.ref(`draftQueue/${mode}/${uid}`);
+      playerRef = db.ref(`draftPlayers/${playerId}`);
+      queueRef = db.ref(`draftQueue/${mode}/${playerId}`);
       await playerRef.onDisconnect().remove();
       await queueRef.onDisconnect().remove();
       listenForAssignment();
       listenForQueue();
       await playerRef.set({
-        uid,
+        playerId,
+        authUid: uid,
         nickname,
         mode,
         state: "matching",
         updatedAt: firebase.database.ServerValue.TIMESTAMP
       });
-      await queueRef.set({ uid, createdAt: firebase.database.ServerValue.TIMESTAMP });
+      await queueRef.set({ playerId, authUid: uid, createdAt: firebase.database.ServerValue.TIMESTAMP });
       startHeartbeat();
       await tryCreateMatch();
     } catch (error) {
@@ -104,24 +108,24 @@
     try {
       const queue = await db.ref(`draftQueue/${mode}`).orderByChild("createdAt").limitToFirst(20).once("value");
       const opponents = [];
-      queue.forEach(child => { if (child.key !== uid) opponents.push(child.key); });
-      for (const opponentUid of opponents) {
-        const pairId = [uid, opponentUid].sort().join("_");
+      queue.forEach(child => { if (child.key !== playerId) opponents.push(child.key); });
+      for (const opponentId of opponents) {
+        const pairId = [playerId, opponentId].sort().join("_");
         const lockRef = db.ref(`draftPairLocks/${pairId}`);
-        const lock = await lockRef.transaction(current => current || uid);
-        if (!lock.committed || lock.snapshot.val() !== uid) continue;
-        const opponent = (await db.ref(`draftPlayers/${opponentUid}`).once("value")).val();
+        const lock = await lockRef.transaction(current => current || playerId);
+        if (!lock.committed || lock.snapshot.val() !== playerId) continue;
+        const opponent = (await db.ref(`draftPlayers/${opponentId}`).once("value")).val();
         const opponentExpired = !opponent?.updatedAt || Date.now() - opponent.updatedAt > 60000;
         if (!opponent || opponent.mode !== mode || opponentExpired) {
-          await db.ref(`draftQueue/${mode}/${opponentUid}`).remove();
+          await db.ref(`draftQueue/${mode}/${opponentId}`).remove();
           await lockRef.remove();
           continue;
         }
         const ref = db.ref("draftMatches").push();
         const labels = [nickname, opponent.nickname || "匿名玩家"];
         await ref.set({
-          player1: uid,
-          player2: opponentUid,
+          player1: playerId,
+          player2: opponentId,
           mode,
           labels,
           state: window.BBOGame.createOnlineVersusState(mode, labels),
@@ -129,10 +133,10 @@
           deadline: Date.now() + 15000
         });
         await db.ref().update({
-          [`draftPlayers/${uid}/matchId`]: ref.key,
-          [`draftPlayers/${opponentUid}/matchId`]: ref.key,
-          [`draftQueue/${mode}/${uid}`]: null,
-          [`draftQueue/${mode}/${opponentUid}`]: null,
+          [`draftPlayers/${playerId}/matchId`]: ref.key,
+          [`draftPlayers/${opponentId}/matchId`]: ref.key,
+          [`draftQueue/${mode}/${playerId}`]: null,
+          [`draftQueue/${mode}/${opponentId}`]: null,
           [`draftPairLocks/${pairId}`]: null
         });
         queueRef = null;
@@ -213,7 +217,7 @@
       }
       if (match.resultHtml) {
         window.BBOGame.renderOnlineDraftSeries(match.resultHtml);
-      } else if (match.state.finished && match.player1 === uid) {
+      } else if (match.state.finished && match.player1 === playerId) {
         const resultHtml = window.BBOGame.simulateOnlineSeries();
         await matchRef.child("resultHtml").set(resultHtml);
       }
@@ -248,7 +252,7 @@
       if (seconds > 0) return;
       clearInterval(timer);
       const lock = await matchRef.child("autoLock").transaction(value =>
-        value?.revision === currentMatch.revision ? undefined : { revision: currentMatch.revision, uid }
+        value?.revision === currentMatch.revision ? undefined : { revision: currentMatch.revision, playerId }
       );
       if (lock.committed) window.BBOGame.autoOnlineVersusAction();
     }, 250);
