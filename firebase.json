@@ -38,6 +38,7 @@
       ".agents/**",
       ".firebase/**",
       ".github/**",
+      "tml-cache/**",
       "**/node_modules/**",
       "**/*.exe",
       "**/*.msi",
