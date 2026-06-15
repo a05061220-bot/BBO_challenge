@@ -1233,10 +1233,10 @@ ${info}
       free: null
     }[versusState.mode];
     document.getElementById(`versusCounts${teamIndex + 1}`).innerHTML = `
-      <span class="card-count card-purple">${counts["紫"]}</span>
-      <span class="card-count card-red">${counts["紅"]}</span>
-      <span class="card-count card-yellow">${counts["黃"]}</span>
-      <span class="card-count card-blue">${counts["藍"]}</span>
+      <span class="card-count card-purple"><b>紫</b>${counts["紫"]}</span>
+      <span class="card-count card-red"><b>紅</b>${counts["紅"]}</span>
+      <span class="card-count card-yellow"><b>黃</b>${counts["黃"]}</span>
+      <span class="card-count card-blue"><b>藍</b>${counts["藍"]}</span>
       ${limits ? `<span class="versus-elite-limit">紅紫 ${counts["紫"] + counts["紅"]}/${limits.elite}</span>` : ""}
     `;
     const pendingPlayer = versusState.currentPool?.players.find(player => player.id === versusState.pendingPlayerId);
@@ -1566,16 +1566,16 @@ ${info}
 
   function renderVersusGame(game) {
     const teams = [game.away, game.home];
-    const inningHeaders = Array.from({ length: 9 }, (_, index) => `<th>${index + 1}</th>`).join("");
+    const inningHeaders = Array.from({ length: 9 }, (_, index) => `<th class="inning-cell">${index + 1}</th>`).join("");
     const rows = teams.map(teamIndex => {
       const innings = game.innings[teamIndex];
       return `
         <tr>
           <td class="team-cell">${versusPlayerLabel(teamIndex)}${teamIndex === game.away ? "（先攻）" : "（後攻）"}</td>
-          ${innings.map(runs => `<td>${runs}</td>`).join("")}
-          <td>${game.runs[teamIndex]}</td>
-          <td>${game.hits[teamIndex]}</td>
-          <td>${game.errors[teamIndex]}</td>
+          ${innings.map(runs => `<td class="inning-cell">${runs}</td>`).join("")}
+          <td class="summary-cell runs-cell">${game.runs[teamIndex]}</td>
+          <td class="summary-cell">${game.hits[teamIndex]}</td>
+          <td class="summary-cell">${game.errors[teamIndex]}</td>
         </tr>
       `;
     }).join("");
@@ -1592,7 +1592,7 @@ ${info}
           </div>
         </div>
         <table class="scoreboard">
-          <thead><tr><th>TEAM</th>${inningHeaders}<th>R</th><th>H</th><th>E</th></tr></thead>
+          <thead><tr><th class="team-cell">TEAM</th>${inningHeaders}<th class="summary-cell runs-cell">R</th><th class="summary-cell">H</th><th class="summary-cell">E</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
         <div class="versus-outcome">
