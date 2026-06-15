@@ -147,6 +147,9 @@ function Ability($p,$rel,$floor,$cap) {
     $x = 0.5 + (($p - 0.5) * (Clamp $rel 0.25 1))
     return [int][Math]::Round($floor + (($cap-$floor) * [Math]::Pow((Clamp $x),1.65)))
 }
+function Pitcher-Ability($p,$rel,$cap) {
+    return Ability $p $rel ([Math]::Max(60, $cap - 18)) $cap
+}
 function Tier-Map($rows) {
     $sorted = @($rows | Sort-Object ov -Descending)
     $redCount = [Math]::Max(1, [Math]::Ceiling($sorted.Count * .12))
@@ -177,7 +180,7 @@ function Build-Pitchers($rows) {
     foreach($r in $rows){$r|Add-Member sta (.65*$start[$r.key]+.35*$work[$r.key]);$r|Add-Member ctl (.75*$bb[$r.key]+.25*$kk[$r.key]);$r|Add-Member vel (.6*$kk[$r.key]+.4*$hit[$r.key]);$r|Add-Member brk (.5*$whip[$r.key]+.5*$era[$r.key]);$r|Add-Member ov (.2*$r.sta+.3*$r.ctl+.25*$r.vel+.25*$r.brk)}
     $tiers=Tier-Map $rows;$out=@()
     foreach($r in $rows){$role=if($r.GS-ge[Math]::Max(3,$r.G-$r.GS)){'SP'}elseif($r.SV-ge3){'CP'}else{'RP'};$card=$tiers[$r.key];$cap=PCaps $card $role;$rel=Clamp (Div $r.BF 300) .25 1
-        $out += [pscustomobject][ordered]@{id="tml-$($r.year)-$([Math]::Abs($r.key.GetHashCode()))-p";source='twbsball-wayback-derived';league='TML';type='pitcher';team=$r.team;year=$r.year;name=$r.name;cardType=$card;role=$role;roles=@($role);stamina=Ability $r.sta $rel 60 $cap.st;control=Ability $r.ctl $rel 60 $cap.co;velocity=Ability $r.vel $rel 60 $cap.v;breaking=Ability $r.brk $rel 60 $cap.b;battersFaced=[int]$r.BF}
+        $out += [pscustomobject][ordered]@{id="tml-$($r.year)-$([Math]::Abs($r.key.GetHashCode()))-p";source='twbsball-wayback-derived';league='TML';type='pitcher';team=$r.team;year=$r.year;name=$r.name;cardType=$card;role=$role;roles=@($role);stamina=Pitcher-Ability $r.sta $rel $cap.st;control=Pitcher-Ability $r.ctl $rel $cap.co;velocity=Pitcher-Ability $r.vel $rel $cap.v;breaking=Pitcher-Ability $r.brk $rel $cap.b;battersFaced=[int]$r.BF}
     };return $out
 }
 
