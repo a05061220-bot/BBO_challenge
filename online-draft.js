@@ -202,26 +202,31 @@
     matchRef = db.ref(`draftMatches/${matchId}`);
     await matchRef.onDisconnect().remove();
     matchListener = matchRef.on("value", async snapshot => {
-      const match = snapshot.val();
-      if (!match) return;
-      currentMatch = match;
-      const notice = match.state?.freeSpinNotice;
-      if (notice && notice.teamIndex === localTeamIndex() && notice.id !== lastFreeSpinNoticeId) {
-        lastFreeSpinNoticeId = notice.id;
-        alert("目前選秀名單沒有任何可加入球員，已免費贈送你一次 SPIN 機會！");
+      try {
+        const match = snapshot.val();
+        if (!match) return;
+        currentMatch = match;
+        const notice = match.state?.freeSpinNotice;
+        if (notice && notice.teamIndex === localTeamIndex() && notice.id !== lastFreeSpinNoticeId) {
+          lastFreeSpinNoticeId = notice.id;
+          alert("目前選秀名單沒有任何可加入球員，已免費贈送你一次 SPIN 機會！");
+        }
+        if (match.revision !== currentRevision) {
+          currentRevision = match.revision;
+          if (currentRevision === 0) window.BBOGame.startOnlineVersusDraft(match.state);
+          else window.BBOGame.importOnlineVersusState(match.state);
+        }
+        if (match.resultHtml) {
+          window.BBOGame.renderOnlineDraftSeries(match.resultHtml);
+        } else if (match.state.finished && match.player1 === playerId) {
+          const resultHtml = window.BBOGame.simulateOnlineSeries();
+          await matchRef.child("resultHtml").set(resultHtml);
+        }
+        startTimer();
+      } catch (error) {
+        console.error("載入線上選秀對戰失敗", error);
+        setMatchStatus(`載入對戰失敗：${error.message}`);
       }
-      if (match.revision !== currentRevision) {
-        currentRevision = match.revision;
-        if (currentRevision === 0) window.BBOGame.startOnlineVersusDraft(match.state);
-        else window.BBOGame.importOnlineVersusState(match.state);
-      }
-      if (match.resultHtml) {
-        window.BBOGame.renderOnlineDraftSeries(match.resultHtml);
-      } else if (match.state.finished && match.player1 === playerId) {
-        const resultHtml = window.BBOGame.simulateOnlineSeries();
-        await matchRef.child("resultHtml").set(resultHtml);
-      }
-      startTimer();
     });
   }
 

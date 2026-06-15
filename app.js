@@ -1403,7 +1403,7 @@ ${info}
 
   function startOnlineVersusDraft(state) {
     onlineVersusMode = true;
-    versusState = JSON.parse(JSON.stringify(state));
+    versusState = hydrateOnlineVersusState(state);
     document.querySelector("#versusView .view-nav h1").textContent = "線上選秀對戰";
     document.getElementById("versusSpinButton").hidden = false;
     document.getElementById("versusSimulateButton").hidden = true;
@@ -1418,7 +1418,7 @@ ${info}
   }
 
   function importOnlineVersusState(state) {
-    versusState = JSON.parse(JSON.stringify(state));
+    versusState = hydrateOnlineVersusState(state);
     document.querySelector("#versusTeam1 h2").textContent = versusPlayerLabel(0);
     document.querySelector("#versusTeam2 h2").textContent = versusPlayerLabel(1);
     renderVersusMode();
@@ -1429,6 +1429,22 @@ ${info}
     state.mode = mode;
     state.labels = labels;
     return state;
+  }
+
+  function hydrateOnlineVersusState(state) {
+    const hydrated = { ...createVersusState(), ...JSON.parse(JSON.stringify(state || {})) };
+    hydrated.teams = [0, 1].map(teamIndex => {
+      const emptyTeam = createVersusTeam();
+      const savedTeam = hydrated.teams?.[teamIndex] || {};
+      return {
+        ...emptyTeam,
+        ...savedTeam,
+        hitters: { ...emptyTeam.hitters, ...(savedTeam.hitters || {}) },
+        pitchers: { ...emptyTeam.pitchers, ...(savedTeam.pitchers || {}) },
+        lineup: savedTeam.lineup || emptyTeam.lineup
+      };
+    });
+    return hydrated;
   }
 
   function autoOnlineVersusAction() {
