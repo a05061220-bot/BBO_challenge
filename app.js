@@ -339,6 +339,8 @@
   let versusState = createVersusState();
   let onlineVersusMode = false;
   let onlineAutoOverride = false;
+  let versusAdjustmentTimer;
+  let versusAdjustmentNoticeDeadline = 0;
 
   function createVersusTeam() {
     return {
@@ -358,7 +360,8 @@
       spinner: 0,
       picker: 0,
       picksInPool: 0,
-      finished: false
+      finished: false,
+      lineupDeadline: null
     };
   }
 
@@ -1292,22 +1295,53 @@ ${info}
 
     document.getElementById("versusTeam1").classList.toggle("active", !versusState.finished && versusState.picker === 0);
     document.getElementById("versusTeam2").classList.toggle("active", !versusState.finished && versusState.picker === 1);
-    document.getElementById("versusStatus").textContent = versusState.finished
-      ? "雙方選秀完成，可調整棒次後模擬三戰兩勝"
+    const adjustmentSeconds = getVersusAdjustmentSeconds();
+    const adjustingLineup = adjustmentSeconds > 0;
+    const status = document.getElementById("versusStatus");
+    status.classList.toggle("lineup-adjustment-active", adjustingLineup);
+    status.textContent = versusState.finished
+      ? adjustingLineup
+        ? `請調整棒次｜剩餘 ${formatVersusCountdown(adjustmentSeconds)}`
+        : "棒次調整時間結束，準備進行三戰兩勝"
       : `目前由${versusPlayerLabel(versusState.picker)}${versusState.currentPool ? "選擇一位球員" : "按下 SPIN"}`;
 
     const spinButton = document.getElementById("versusSpinButton");
     spinButton.disabled = versusState.finished || Boolean(versusState.currentPool);
     spinButton.textContent = `🎲 ${versusPlayerLabel(versusState.spinner)} SPIN`;
-    document.getElementById("versusSimulateButton").disabled = !versusState.finished;
+    document.getElementById("versusSimulateButton").disabled = !versusState.finished || adjustingLineup;
     document.getElementById("versusModeSelect").disabled = Boolean(versusState.currentPool) || versusAllPlayers().length > 0;
 
     document.getElementById("versusPoolInfo").textContent = versusState.currentPool
       ? `${versusState.currentPool.year} ${versusState.currentPool.team}｜${versusPlayerLabel(versusState.picker)}選擇`
-      : versusState.finished ? "選秀完成" : `等待${versusPlayerLabel(versusState.spinner)} SPIN`;
+      : versusState.finished
+        ? adjustingLineup ? "請拖曳左右兩隊的打者調整棒次" : "棒次已鎖定"
+        : `等待${versusPlayerLabel(versusState.spinner)} SPIN`;
     document.getElementById("versusPlayers").innerHTML = versusState.currentPool
       ? versusState.currentPool.players.map(versusPlayerCard).join("")
       : "";
+    startVersusAdjustmentTimer();
+  }
+
+  function getVersusAdjustmentSeconds() {
+    return Math.max(0, Math.ceil((Number(versusState.lineupDeadline || 0) - Date.now()) / 1000));
+  }
+
+  function formatVersusCountdown(seconds) {
+    return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  }
+
+  function startVersusAdjustmentTimer() {
+    clearInterval(versusAdjustmentTimer);
+    if (!versusState.finished || !versusState.lineupDeadline) return;
+    if (versusAdjustmentNoticeDeadline !== versusState.lineupDeadline && getVersusAdjustmentSeconds() > 0) {
+      versusAdjustmentNoticeDeadline = versusState.lineupDeadline;
+      alert("雙方選秀完成！請在 1 分鐘內拖曳打者調整棒次。");
+    }
+    if (onlineVersusMode || getVersusAdjustmentSeconds() <= 0) return;
+    versusAdjustmentTimer = setInterval(() => {
+      if (getVersusAdjustmentSeconds() <= 0) clearInterval(versusAdjustmentTimer);
+      renderVersusMode();
+    }, 1000);
   }
 
   function openVersusMode() {
@@ -1386,7 +1420,7 @@ ${info}
     if (versusState.teams.every(candidate => versusTeamCount(candidate) >= config.rosterLimits.total)) {
       versusState.finished = true;
       versusState.currentPool = null;
-      alert("雙方選秀完成！請調整棒次後模擬三戰兩勝。");
+      versusState.lineupDeadline = Date.now() + 60000;
     } else if (versusState.picksInPool === 1) {
       versusState.picker = 1 - versusState.spinner;
       grantVersusFreeSpinIfPoolBlocked();
@@ -1465,6 +1499,7 @@ ${info}
   }
 
   function startVersusLineupDrag(teamIndex, orderIndex) {
+    if (!canAdjustVersusLineup(teamIndex)) return;
     versusState.draggedLineup = { teamIndex, orderIndex };
   }
 
@@ -1474,7 +1509,7 @@ ${info}
 
   function dropVersusLineup(teamIndex, targetIndex) {
     const dragged = versusState.draggedLineup;
-    if (!dragged || dragged.teamIndex !== teamIndex || dragged.orderIndex === targetIndex) {
+    if (!canAdjustVersusLineup(teamIndex) || !dragged || dragged.teamIndex !== teamIndex || dragged.orderIndex === targetIndex) {
       return;
     }
     const lineup = versusState.teams[teamIndex].lineup;
@@ -1482,6 +1517,12 @@ ${info}
     lineup.splice(targetIndex, 0, slot);
     versusState.draggedLineup = null;
     renderVersusMode();
+    if (onlineVersusMode) window.BBOOnlineDraft?.stateChanged(versusState);
+  }
+
+  function canAdjustVersusLineup(teamIndex) {
+    if (!versusState.finished || getVersusAdjustmentSeconds() <= 0) return false;
+    return !onlineVersusMode || window.BBOOnlineDraft?.canEditLineup(teamIndex);
   }
 
   function setVersusMode(mode) {
@@ -1563,7 +1604,7 @@ ${info}
   }
 
   function simulateVersusSeries() {
-    if (!versusState.finished) {
+    if (!versusState.finished || getVersusAdjustmentSeconds() > 0) {
       return;
     }
 

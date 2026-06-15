@@ -52,6 +52,11 @@
     return actor === localTeamIndex();
   }
 
+  function canEditLineup(teamIndex) {
+    const state = currentMatch?.state;
+    return Boolean(state?.finished && state.lineupDeadline > Date.now() && teamIndex === localTeamIndex());
+  }
+
   async function open() {
     await leave();
     const entered = prompt("請輸入線上選秀對戰暱稱（最多 16 字）", nickname);
@@ -218,9 +223,6 @@
         }
         if (match.resultHtml) {
           window.BBOGame.renderOnlineDraftSeries(match.resultHtml);
-        } else if (match.state.finished && match.player1 === playerId) {
-          const resultHtml = window.BBOGame.simulateOnlineSeries();
-          await matchRef.child("resultHtml").set(resultHtml);
         }
         startTimer();
       } catch (error) {
@@ -248,7 +250,28 @@
   function startTimer() {
     clearInterval(timer);
     timer = setInterval(async () => {
-      if (!currentMatch?.state || currentMatch.state.finished) return clearInterval(timer);
+      if (!currentMatch?.state) return clearInterval(timer);
+      if (currentMatch.state.finished) {
+        const status = document.getElementById("versusStatus");
+        if (currentMatch.resultHtml) {
+          status.classList.remove("lineup-adjustment-active");
+          status.textContent = "線上選秀對戰完成";
+          return clearInterval(timer);
+        }
+        const seconds = Math.max(0, Math.ceil((currentMatch.state.lineupDeadline - Date.now()) / 1000));
+        status.classList.toggle("lineup-adjustment-active", seconds > 0);
+        status.textContent = seconds > 0
+          ? `請調整你的棒次｜剩餘 ${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`
+          : "棒次調整時間結束，正在產生對戰結果...";
+        if (seconds > 0) return;
+        clearInterval(timer);
+        if (currentMatch.player1 !== playerId || currentMatch.resultHtml) return;
+        const resultLock = await matchRef.child("resultLock").transaction(value => value || playerId);
+        if (!resultLock.committed || resultLock.snapshot.val() !== playerId) return;
+        const resultHtml = window.BBOGame.simulateOnlineSeries();
+        await matchRef.child("resultHtml").set(resultHtml);
+        return;
+      }
       const seconds = Math.max(0, Math.ceil((currentMatch.deadline - Date.now()) / 1000));
       const actor = currentMatch.state.currentPool ? currentMatch.state.picker : currentMatch.state.spinner;
       const action = currentMatch.state.currentPool ? "選擇球員" : "按下 SPIN";
@@ -297,5 +320,5 @@
   window.openOnlineDraftMode = open;
   window.searchAgainOnlineDraft = searchAgain;
   window.cancelOnlineDraftMatch = cancel;
-  window.BBOOnlineDraft = { canAct, stateChanged, leave };
+  window.BBOOnlineDraft = { canAct, canEditLineup, stateChanged, leave };
 })();
