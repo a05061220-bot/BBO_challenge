@@ -6,10 +6,16 @@
   let mode = "free";
   let playerRef;
   let queueRef;
+  let queueModeRef;
   let matchRef;
   let playerListener;
+  let queueListener;
   let matchListener;
   let timer;
+  let heartbeatTimer;
+  let retryTimer;
+  let creatingMatch = false;
+  let matching = false;
   let currentMatch;
   let currentRevision = -1;
   let lastFreeSpinNoticeId = null;
@@ -65,58 +71,113 @@
   async function findOpponent() {
     try {
       await ensureFirebase();
+      matching = true;
       setMatchStatus("正在尋找對手...");
       playerRef = db.ref(`draftPlayers/${uid}`);
       queueRef = db.ref(`draftQueue/${mode}/${uid}`);
       await playerRef.onDisconnect().remove();
       await queueRef.onDisconnect().remove();
-      await playerRef.set({ uid, nickname, mode, state: "matching" });
-      await queueRef.set({ uid, createdAt: firebase.database.ServerValue.TIMESTAMP });
       listenForAssignment();
+      listenForQueue();
+      await playerRef.set({
+        uid,
+        nickname,
+        mode,
+        state: "matching",
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      });
+      await queueRef.set({ uid, createdAt: firebase.database.ServerValue.TIMESTAMP });
+      startHeartbeat();
       await tryCreateMatch();
     } catch (error) {
       console.error("選秀對戰配對失敗", error);
+      matching = false;
       setMatchStatus(`配對失敗：${error.message}`);
       alert(`選秀對戰配對失敗：${error.message}`);
     }
   }
 
   async function tryCreateMatch() {
-    const queue = await db.ref(`draftQueue/${mode}`).orderByChild("createdAt").limitToFirst(20).once("value");
-    const opponents = [];
-    queue.forEach(child => { if (child.key !== uid) opponents.push(child.key); });
-    for (const opponentUid of opponents) {
-      const pairId = [uid, opponentUid].sort().join("_");
-      const lockRef = db.ref(`draftPairLocks/${pairId}`);
-      const lock = await lockRef.transaction(current => current || uid);
-      if (!lock.committed || lock.snapshot.val() !== uid) continue;
-      const opponent = (await db.ref(`draftPlayers/${opponentUid}`).once("value")).val();
-      if (!opponent || opponent.mode !== mode) {
-        await lockRef.remove();
-        continue;
+    if (!matching || creatingMatch || matchRef) return;
+    creatingMatch = true;
+    clearTimeout(retryTimer);
+    try {
+      const queue = await db.ref(`draftQueue/${mode}`).orderByChild("createdAt").limitToFirst(20).once("value");
+      const opponents = [];
+      queue.forEach(child => { if (child.key !== uid) opponents.push(child.key); });
+      for (const opponentUid of opponents) {
+        const pairId = [uid, opponentUid].sort().join("_");
+        const lockRef = db.ref(`draftPairLocks/${pairId}`);
+        const lock = await lockRef.transaction(current => current || uid);
+        if (!lock.committed || lock.snapshot.val() !== uid) continue;
+        const opponent = (await db.ref(`draftPlayers/${opponentUid}`).once("value")).val();
+        const opponentExpired = !opponent?.updatedAt || Date.now() - opponent.updatedAt > 60000;
+        if (!opponent || opponent.mode !== mode || opponentExpired) {
+          await db.ref(`draftQueue/${mode}/${opponentUid}`).remove();
+          await lockRef.remove();
+          continue;
+        }
+        const ref = db.ref("draftMatches").push();
+        const labels = [nickname, opponent.nickname || "匿名玩家"];
+        await ref.set({
+          player1: uid,
+          player2: opponentUid,
+          mode,
+          labels,
+          state: window.BBOGame.createOnlineVersusState(mode, labels),
+          revision: 0,
+          deadline: Date.now() + 15000
+        });
+        await db.ref().update({
+          [`draftPlayers/${uid}/matchId`]: ref.key,
+          [`draftPlayers/${opponentUid}/matchId`]: ref.key,
+          [`draftQueue/${mode}/${uid}`]: null,
+          [`draftQueue/${mode}/${opponentUid}`]: null,
+          [`draftPairLocks/${pairId}`]: null
+        });
+        queueRef = null;
+        matching = false;
+        stopMatchmakingTimers();
+        return;
       }
-      const ref = db.ref("draftMatches").push();
-      const labels = [nickname, opponent.nickname || "匿名玩家"];
-      await ref.set({
-        player1: uid,
-        player2: opponentUid,
-        mode,
-        labels,
-        state: window.BBOGame.createOnlineVersusState(mode, labels),
-        revision: 0,
-        deadline: Date.now() + 15000
-      });
-      await db.ref().update({
-        [`draftPlayers/${uid}/matchId`]: ref.key,
-        [`draftPlayers/${opponentUid}/matchId`]: ref.key,
-        [`draftQueue/${mode}/${uid}`]: null,
-        [`draftQueue/${mode}/${opponentUid}`]: null,
-        [`draftPairLocks/${pairId}`]: null
-      });
-      queueRef = null;
-      return;
+      scheduleRetry();
+    } catch (error) {
+      console.error("選秀對戰配對重試失敗", error);
+      setMatchStatus(`配對重試中：${error.message}`);
+      scheduleRetry();
+    } finally {
+      creatingMatch = false;
     }
-    setTimeout(() => { if (queueRef) tryCreateMatch().catch(console.error); }, 2500);
+  }
+
+  function scheduleRetry() {
+    clearTimeout(retryTimer);
+    if (matching) retryTimer = setTimeout(() => tryCreateMatch(), 2500);
+  }
+
+  function listenForQueue() {
+    queueModeRef = db.ref(`draftQueue/${mode}`);
+    queueListener = queueModeRef.on("value", snapshot => {
+      if (!matching) return;
+      const waitingCount = snapshot.numChildren();
+      setMatchStatus(`正在尋找對手... 同頻道等待中：${waitingCount} 人`);
+      if (waitingCount > 1) tryCreateMatch();
+    }, error => setMatchStatus(`無法讀取配對佇列：${error.message}`));
+  }
+
+  function startHeartbeat() {
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = setInterval(() => {
+      if (matching && playerRef) {
+        playerRef.child("updatedAt").set(firebase.database.ServerValue.TIMESTAMP).catch(console.error);
+      }
+    }, 15000);
+  }
+
+  function stopMatchmakingTimers() {
+    clearInterval(heartbeatTimer);
+    clearTimeout(retryTimer);
+    heartbeatTimer = retryTimer = null;
   }
 
   function listenForAssignment() {
@@ -128,6 +189,12 @@
 
   async function joinMatch(matchId) {
     if (matchRef?.key === matchId) return;
+    matching = false;
+    stopMatchmakingTimers();
+    if (queueModeRef && queueListener) queueModeRef.off("value", queueListener);
+    queueModeRef = null;
+    queueListener = null;
+    setMatchStatus("配對成功，正在進入選秀...");
     matchRef = db.ref(`draftMatches/${matchId}`);
     await matchRef.onDisconnect().remove();
     matchListener = matchRef.on("value", async snapshot => {
@@ -189,7 +256,11 @@
 
   async function leave() {
     clearInterval(timer);
+    matching = false;
+    creatingMatch = false;
+    stopMatchmakingTimers();
     if (playerRef && playerListener) playerRef.off("value", playerListener);
+    if (queueModeRef && queueListener) queueModeRef.off("value", queueListener);
     if (matchRef && matchListener) matchRef.off("value", matchListener);
     await Promise.all([
       queueRef?.remove().catch(() => {}),
@@ -197,6 +268,8 @@
       matchRef?.remove().catch(() => {})
     ]);
     queueRef = playerRef = matchRef = null;
+    queueModeRef = null;
+    queueListener = null;
     currentMatch = null;
     currentRevision = -1;
     lastFreeSpinNoticeId = null;
