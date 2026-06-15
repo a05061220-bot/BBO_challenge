@@ -203,7 +203,7 @@
       year: Number(raw.year) || 0,
       role: raw.role || (Array.isArray(raw.roles) ? raw.roles[0] : "SP") || "SP",
       roles: Array.isArray(raw.roles) ? raw.roles.filter(Boolean) : (raw.role ? [raw.role] : []),
-      stamina: normalizeAbility(raw.stamina),
+      stamina: Number(raw.stamina) || 0,
       control: normalizeAbility(raw.control),
       velocity: normalizeAbility(raw.velocity),
       breaking: normalizeAbility(raw.breaking),
