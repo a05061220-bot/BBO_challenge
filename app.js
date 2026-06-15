@@ -164,6 +164,10 @@
     return left.name.localeCompare(right.name, "zh-Hant");
   }
 
+  function normalizeAbility(value) {
+    return Math.max(60, Number(value) || 0);
+  }
+
   function normalizeImportedPlayer(raw, index) {
     if (!raw || !raw.type) {
       return null;
@@ -178,11 +182,11 @@
         team: raw.team || "未知球隊",
         year: Number(raw.year) || 0,
         positions: Array.isArray(raw.positions) ? raw.positions.filter(Boolean) : [],
-        power: Number(raw.power) || 0,
-        contact: Number(raw.contact) || 0,
-        speed: Math.max(0, (Number(raw.speed) || 0) - (raw.cardType === "紫" ? 5 : 0)),
-        fielding: Number(raw.fielding) || 0,
-        arm: Number(raw.arm) || 0,
+        power: normalizeAbility(raw.power),
+        contact: normalizeAbility(raw.contact),
+        speed: normalizeAbility((Number(raw.speed) || 0) - (raw.cardType === "紫" ? 5 : 0)),
+        fielding: normalizeAbility(raw.fielding),
+        arm: normalizeAbility(raw.arm),
         cardType: raw.cardType || "藍",
         hittingHand: raw.hittingHand || "",
         levelUp: raw.levelUp || "",
@@ -199,10 +203,10 @@
       year: Number(raw.year) || 0,
       role: raw.role || (Array.isArray(raw.roles) ? raw.roles[0] : "SP") || "SP",
       roles: Array.isArray(raw.roles) ? raw.roles.filter(Boolean) : (raw.role ? [raw.role] : []),
-      stamina: Number(raw.stamina) || 0,
-      control: Number(raw.control) || 0,
-      velocity: Number(raw.velocity) || 0,
-      breaking: Number(raw.breaking) || 0,
+      stamina: normalizeAbility(raw.stamina),
+      control: normalizeAbility(raw.control),
+      velocity: normalizeAbility(raw.velocity),
+      breaking: normalizeAbility(raw.breaking),
       cardType: raw.cardType || "藍",
       throwType: raw.throwType || "",
       levelUp: raw.levelUp || "",
