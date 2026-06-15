@@ -674,9 +674,20 @@ ${info}
   function populateQueryYears() {
     const league = document.getElementById("queryLeague").value;
     const yearSelect = document.getElementById("queryYear");
-    const years = [...new Set(TEAMS.filter(pool => pool.league === league).map(pool => pool.year))]
+    const years = [...new Set(TEAMS
+      .filter(pool =>
+        pool.league === league &&
+        Number.isInteger(pool.year) &&
+        pool.year > 0 &&
+        Array.isArray(pool.players) &&
+        pool.players.length > 0
+      )
+      .map(pool => pool.year))]
       .sort((left, right) => right - left);
-    yearSelect.innerHTML = years.map(year => `<option value="${year}">${year}</option>`).join("");
+
+    yearSelect.innerHTML = years.length
+      ? years.map(year => `<option value="${year}">${year}</option>`).join("")
+      : '<option value="">無可選年份</option>';
     yearSelect.disabled = years.length === 0;
     populateQueryTeams();
   }
@@ -686,10 +697,17 @@ ${info}
     const year = Number(document.getElementById("queryYear").value);
     const teamSelect = document.getElementById("queryTeam");
     const teams = TEAMS
-      .filter(pool => pool.league === league && pool.year === year)
+      .filter(pool =>
+        pool.league === league &&
+        pool.year === year &&
+        Array.isArray(pool.players) &&
+        pool.players.length > 0
+      )
       .map(pool => pool.team)
       .sort((left, right) => left.localeCompare(right, "zh-Hant"));
-    teamSelect.innerHTML = teams.map(team => `<option value="${team}">${team}</option>`).join("");
+    teamSelect.innerHTML = teams.length
+      ? teams.map(team => `<option value="${team}">${team}</option>`).join("")
+      : '<option value="">無可選球隊</option>';
     teamSelect.disabled = teams.length === 0;
     renderPlayerQuery();
   }

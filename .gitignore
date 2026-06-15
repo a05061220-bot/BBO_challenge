@@ -7,6 +7,7 @@ BBO_challenge_backups/
 
 # Firebase CLI local cache.
 .firebase/
+firebase-debug.log
 
 # Regenerable Taiwan Baseball Wiki / Wayback cache.
 tml-cache/
