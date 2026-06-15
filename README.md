@@ -220,16 +220,10 @@ window.BBOFirebaseConfig = {
 - 2005 年打者只與 2005 年打者比較
 - 2005 年投手只與 2005 年投手比較
 
-台灣大聯盟（TML）資料依聯盟分組。TML 球員只和同年度 TML 球員比較，不會與
-同年度 CPBL 球員共同換算卡色、能力百分位或紫卡名額。
+若未來加入台灣大聯盟（TML）資料，必須再依聯盟分組。TML 球員只和同年度 TML
+球員比較，不得與同年度 CPBL 球員共同換算卡色、能力百分位或紫卡名額。
 
-目前已匯入 1997–2002 年台北太陽、台中金剛、嘉南勇士及高屏雷公四隊資料，
-共 344 張卡片（209 張野手、135 張投手）。卡色與能力百分位依完整同年度 TML
-投手／打者分別排名，每年度投手與打者紫卡各最多 5 張。
-
-TML 資料來源為台灣棒球維基館的球隊歷屆成員與球員職棒生涯成績，透過
-Internet Archive Wayback Machine 快照取得。來源未提供逐年野手守備明細，因此
-守備與傳球是依守位、同年度打擊貢獻及出賽量估算，不代表實際守備統計。
+目前資料檔尚未匯入 TML 球員；球員查詢選擇 TML 時會顯示明確的無資料提示。
 
 樣本門檻：
 
@@ -381,23 +375,6 @@ background-image:
 3. 計算綜合能力與年度卡色。
 4. 套用卡色上下限、力打差距、力打總和及守傳限制。
 5. 輸出 `window.BBOImportedDraft = [...]` 至 `BBO_Search/bbo-data.js`。
-
-### 重新產生 TML 卡片
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\import-tml-data.ps1
-```
-
-此腳本會：
-
-1. 從 TML 四支球隊頁面取得歷屆投手、野手名單。
-2. 從 Wayback Machine 快取每位球員的職棒生涯成績頁。
-3. 只保留 1997–2002 年 TML 四隊成績及最低 20 打席／面對打者的球季。
-4. 依同年度 TML 全聯盟投手、打者分開排名並套用既有卡色與能力限制。
-5. 輸出 `BBO_Search/tml-data.json`，並合併至 `BBO_Search/bbo-data.js`。
-
-下載頁面會快取在不納入 Git 的 `tml-cache/`。使用 `-Refresh` 可重新下載快照。
-執行 `generate-bbo-data.ps1` 重建 CPBL 卡片時，也會自動合併現有 TML 資料檔。
 
 重新產生：
 

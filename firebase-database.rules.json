@@ -29,6 +29,41 @@
         ".read": "auth != null",
         ".write": "auth != null"
       }
+    },
+    "challengeResults": {
+      ".read": true,
+      "$mode": {
+        "$resultId": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "draftPlayers": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "draftQueue": {
+      "$mode": {
+        ".read": "auth != null",
+        ".indexOn": ["createdAt"],
+        "$uid": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "draftPairLocks": {
+      "$pairId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "draftMatches": {
+      "$matchId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
     }
   }
 }

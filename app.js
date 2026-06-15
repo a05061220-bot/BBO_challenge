@@ -145,6 +145,11 @@
     return (player.stamina + player.control + player.velocity + player.breaking) / 4;
   }
 
+  function scoreBarStyle(score) {
+    const width = Math.max(0, Math.min(100, score / 95 * 100));
+    return `--ability-width:${width.toFixed(1)}%`;
+  }
+
   function compareDraftPlayers(left, right) {
     const cardDiff = cardTypeRank(right.cardType) - cardTypeRank(left.cardType);
     if (cardDiff !== 0) {
@@ -175,7 +180,7 @@
         positions: Array.isArray(raw.positions) ? raw.positions.filter(Boolean) : [],
         power: Number(raw.power) || 0,
         contact: Number(raw.contact) || 0,
-        speed: Number(raw.speed) || 0,
+        speed: Math.max(0, (Number(raw.speed) || 0) - (raw.cardType === "紫" ? 5 : 0)),
         fielding: Number(raw.fielding) || 0,
         arm: Number(raw.arm) || 0,
         cardType: raw.cardType || "藍",
@@ -332,6 +337,8 @@
   const versusPitcherSlots = ["SP1", "SP2", "SP3", "RP1", "RP2", "CP1", "CP2"];
   const lineupWeights = [1.08, 1.06, 1.05, 1.04, 1, 0.98, 0.96, 0.94, 0.89];
   let versusState = createVersusState();
+  let onlineVersusMode = false;
+  let onlineAutoOverride = false;
 
   function createVersusTeam() {
     return {
@@ -414,7 +421,7 @@
   }
 
   function updateRerollButtons() {
-    const canReroll = draftStarted && rosterCount() < config.rosterLimits.total;
+    const canReroll = draftStarted && Boolean(currentPool) && rosterCount() < config.rosterLimits.total;
     document.getElementById("rerollYearButton").disabled = !canReroll || yearRerollUsed;
     document.getElementById("rerollTeamButton").disabled = !canReroll || teamRerollUsed;
   }
@@ -426,6 +433,22 @@
     renderPlayers();
     renderRoster();
     updateRerollButtons();
+    grantFreeSpinIfPoolBlocked();
+  }
+
+  function grantFreeSpinIfPoolBlocked() {
+    if (!currentPool || currentPool.players.some(player => !isPlayerUnavailable(player))) {
+      return false;
+    }
+
+    currentPool = null;
+    playerPickedThisRound = true;
+    clearSelection();
+    document.getElementById("teamInfo").innerHTML = "目前名單無可加入球員，獲得一次免費 SPIN";
+    document.getElementById("players").innerHTML = "";
+    updateRerollButtons();
+    alert("因限制或可用球員不足，目前名單沒有任何球員可以加入。已免費贈送一次 SPIN 機會！");
+    return true;
   }
 
   function updateRoundInfo() {
@@ -581,9 +604,17 @@ ${info}
   }
 
   function showView(viewId) {
-    ["homeView", "gameView", "queryView", "versusView"].forEach(id => {
+    ["homeView", "gameView", "queryView", "statisticsView", "onlineDraftMatchView", "versusView"].forEach(id => {
       document.getElementById(id).hidden = id !== viewId;
     });
+  }
+
+  function showStatisticsView() {
+    showView("statisticsView");
+  }
+
+  function showOnlineDraftMatchView() {
+    showView("onlineDraftMatchView");
   }
 
   function enterGame(mode) {
@@ -601,6 +632,7 @@ ${info}
 
   function showHome() {
     window.BBOOnlineMatch?.leave();
+    window.BBOOnlineDraft?.leave();
     showView("homeView");
   }
 
@@ -639,37 +671,13 @@ ${info}
     }[gameMode];
   }
 
-  function getPopulatedQueryPools(league, year = null) {
-    return TEAMS.filter(pool =>
-      pool.league === league &&
-      Array.isArray(pool.players) &&
-      pool.players.length > 0 &&
-      (year === null || pool.year === year)
-    );
-  }
-
   function populateQueryYears() {
     const league = document.getElementById("queryLeague").value;
     const yearSelect = document.getElementById("queryYear");
-    const previousYear = Number(yearSelect.value);
-    const firstYear = league === "TML" ? 1997 : 1990;
-    const lastYear = league === "TML" ? 2002 : 2025;
-    const years = Array.from(
-      { length: lastYear - firstYear + 1 },
-      (_, index) => lastYear - index
-    );
+    const years = [...new Set(TEAMS.filter(pool => pool.league === league).map(pool => pool.year))]
+      .sort((left, right) => right - left);
     yearSelect.innerHTML = years.map(year => `<option value="${year}">${year}</option>`).join("");
     yearSelect.disabled = years.length === 0;
-
-    if (years.length > 0 && Number.isFinite(previousYear) && previousYear > 0) {
-      const desiredYear = league === "TML"
-        ? Math.min(2002, Math.max(1997, previousYear))
-        : previousYear;
-      if (years.includes(desiredYear)) {
-        yearSelect.value = String(desiredYear);
-      }
-    }
-
     populateQueryTeams();
   }
 
@@ -677,8 +685,9 @@ ${info}
     const league = document.getElementById("queryLeague").value;
     const year = Number(document.getElementById("queryYear").value);
     const teamSelect = document.getElementById("queryTeam");
-    const teams = [...new Set(getPopulatedQueryPools(league, year)
-      .map(pool => pool.team))]
+    const teams = TEAMS
+      .filter(pool => pool.league === league && pool.year === year)
+      .map(pool => pool.team)
       .sort((left, right) => left.localeCompare(right, "zh-Hant"));
     teamSelect.innerHTML = teams.map(team => `<option value="${team}">${team}</option>`).join("");
     teamSelect.disabled = teams.length === 0;
@@ -734,7 +743,7 @@ ${info}
     return `
 <div class="simulation-player">
   <div class="simulation-player-head">
-    <span class="roster-player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}</span>
+    <span class="roster-player-name ability-name-bar ${cardTypeClass(player.cardType)}" style="${scoreBarStyle(score)}">${formatShortYear(player.year)} ${player.name}</span>
     <span class="simulation-slot">${slotKey}</span>
     <strong>${score.toFixed(1)}</strong>
   </div>
@@ -856,6 +865,8 @@ ${info}
         alert("選秀完成！即將自動模擬 120 場球季。");
         simulateSeason();
       }
+    } else {
+      grantFreeSpinIfPoolBlocked();
     }
   }
 
@@ -1043,6 +1054,7 @@ ${info}
         hitterEntries,
         pitcherEntries
       });
+      window.BBOStats?.record({ mode: gameMode, score, wins, losses });
     } catch (error) {
       console.error("模擬球季失敗", error);
       alert(`模擬球季失敗：${error.message}`);
@@ -1057,7 +1069,7 @@ ${info}
   }
 
   function versusPlayerLabel(teamIndex) {
-    return teamIndex === 0 ? "玩家1" : "玩家2";
+    return versusState.labels?.[teamIndex] || (teamIndex === 0 ? "玩家1" : "玩家2");
   }
 
   function versusAllPlayers() {
@@ -1137,6 +1149,26 @@ ${info}
     return true;
   }
 
+  function grantVersusFreeSpinIfPoolBlocked() {
+    const hasChoice = versusState.currentPool?.players.some(player => isVersusPlayerAvailable(player));
+    if (!versusState.currentPool || hasChoice) {
+      return false;
+    }
+
+    versusState.spinner = versusState.picker;
+    versusState.currentPool = null;
+    versusState.pendingPlayerId = null;
+    versusState.picksInPool = 0;
+    versusState.freeSpinNotice = {
+      teamIndex: versusState.picker,
+      id: Date.now()
+    };
+    if (!onlineVersusMode) {
+      alert(`${versusPlayerLabel(versusState.picker)}目前沒有任何可加入球員，免費獲得一次 SPIN 機會！`);
+    }
+    return true;
+  }
+
   function versusPlayerCard(player) {
     const unavailable = !isVersusPlayerAvailable(player);
     const selected = versusState.pendingPlayerId === player.id;
@@ -1203,7 +1235,7 @@ ${info}
           ondrop="dropVersusLineup(${teamIndex},${orderIndex})"
           onclick="${canPlace ? `placeVersusPlayer('${slot}')` : ""}">
           <span class="slot">${orderIndex + 1}. ${slotGroup(slot)}</span>
-          <span class="versus-roster-player ${player ? cardTypeClass(player.cardType) : ""}">${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace ? "可放入" : "尚未選擇"}</span>
+          <span class="versus-roster-player ${player ? `ability-name-bar ${cardTypeClass(player.cardType)}` : ""}" ${player ? `style="${scoreBarStyle(hitterScore(player, slot))}"` : ""}>${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace ? "可放入" : "尚未選擇"}</span>
           ${player ? `<div class="versus-roster-tooltip">${renderPlayerStats(player, "stats stats-grid")}</div>` : ""}
           <span class="drag-handle">${player ? "⋮⋮" : ""}</span>
         </div>
@@ -1216,7 +1248,7 @@ ${info}
       return `
         <div class="versus-roster-row ${canPlace ? "placeable" : ""}" onclick="${canPlace ? `placeVersusPlayer('${slot}')` : ""}">
           <span class="slot">${slot}</span>
-          <span class="versus-roster-player ${player ? cardTypeClass(player.cardType) : ""}">${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace ? "可放入" : "尚未選擇"}</span>
+          <span class="versus-roster-player ${player ? `ability-name-bar ${cardTypeClass(player.cardType)}` : ""}" ${player ? `style="${scoreBarStyle(pitcherScore(player))}"` : ""}>${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace ? "可放入" : "尚未選擇"}</span>
           ${player ? `<div class="versus-roster-tooltip">${renderPlayerStats(player, "stats stats-grid")}</div>` : ""}
           <span></span>
         </div>
@@ -1261,6 +1293,8 @@ ${info}
   }
 
   function openVersusMode() {
+    onlineVersusMode = false;
+    document.querySelector("#versusView .view-nav h1").textContent = "單機對戰";
     resetVersusMode();
     document.getElementById("versusSpinButton").hidden = false;
     document.getElementById("versusSimulateButton").hidden = false;
@@ -1273,12 +1307,17 @@ ${info}
     const selectedMode = document.getElementById("versusModeSelect")?.value || "free";
     versusState = createVersusState();
     versusState.mode = selectedMode;
+    document.querySelector("#versusTeam1 h2").textContent = "玩家1";
+    document.querySelector("#versusTeam2 h2").textContent = "玩家2";
     document.getElementById("versusResult").hidden = true;
     document.getElementById("versusResult").innerHTML = "";
     renderVersusMode();
   }
 
   function versusSpin() {
+    if (onlineVersusMode && !onlineAutoOverride && !window.BBOOnlineDraft?.canAct()) {
+      return;
+    }
     if (versusState.finished || versusState.currentPool) {
       return;
     }
@@ -1291,10 +1330,15 @@ ${info}
     versusState.currentPool = randomPool(suitablePools);
     versusState.picker = versusState.spinner;
     versusState.picksInPool = 0;
+    grantVersusFreeSpinIfPoolBlocked();
     renderVersusMode();
+    if (onlineVersusMode) window.BBOOnlineDraft?.stateChanged(versusState);
   }
 
   function versusPickPlayer(playerId) {
+    if (onlineVersusMode && !window.BBOOnlineDraft?.canAct()) {
+      return;
+    }
     const player = versusState.currentPool?.players.find(candidate => candidate.id === playerId);
     if (!player || !isVersusPlayerAvailable(player)) {
       return;
@@ -1305,6 +1349,9 @@ ${info}
   }
 
   function placeVersusPlayer(slot) {
+    if (onlineVersusMode && !onlineAutoOverride && !window.BBOOnlineDraft?.canAct()) {
+      return;
+    }
     const player = versusState.currentPool?.players.find(candidate => candidate.id === versusState.pendingPlayerId);
     if (!player || !isVersusPlayerAvailable(player) || !getVersusSlots(versusState.teams[versusState.picker], player).includes(slot)) {
       return;
@@ -1324,9 +1371,7 @@ ${info}
       alert("雙方選秀完成！請調整棒次後模擬三戰兩勝。");
     } else if (versusState.picksInPool === 1) {
       versusState.picker = 1 - versusState.spinner;
-      if (!ensureVersusPickerHasChoices()) {
-        alert("玩家目前沒有可補入空缺守位的球員，請重新對戰。");
-      }
+      grantVersusFreeSpinIfPoolBlocked();
     } else {
       versusState.spinner = 1 - versusState.spinner;
       versusState.picker = versusState.spinner;
@@ -1335,6 +1380,54 @@ ${info}
       versusState.picksInPool = 0;
     }
     renderVersusMode();
+    if (onlineVersusMode) window.BBOOnlineDraft?.stateChanged(versusState);
+  }
+
+  function startOnlineVersusDraft(state) {
+    onlineVersusMode = true;
+    versusState = JSON.parse(JSON.stringify(state));
+    document.querySelector("#versusView .view-nav h1").textContent = "線上選秀對戰";
+    document.getElementById("versusSpinButton").hidden = false;
+    document.getElementById("versusSimulateButton").hidden = true;
+    document.getElementById("versusResetButton").hidden = true;
+    document.getElementById("versusModeSelect").disabled = true;
+    document.getElementById("versusResult").hidden = true;
+    document.getElementById("versusResult").innerHTML = "";
+    document.querySelector("#versusTeam1 h2").textContent = versusPlayerLabel(0);
+    document.querySelector("#versusTeam2 h2").textContent = versusPlayerLabel(1);
+    renderVersusMode();
+    showView("versusView");
+  }
+
+  function importOnlineVersusState(state) {
+    versusState = JSON.parse(JSON.stringify(state));
+    document.querySelector("#versusTeam1 h2").textContent = versusPlayerLabel(0);
+    document.querySelector("#versusTeam2 h2").textContent = versusPlayerLabel(1);
+    renderVersusMode();
+  }
+
+  function createOnlineVersusState(mode, labels) {
+    const state = createVersusState();
+    state.mode = mode;
+    state.labels = labels;
+    return state;
+  }
+
+  function autoOnlineVersusAction() {
+    onlineAutoOverride = true;
+    try {
+      if (!versusState.currentPool) {
+        versusSpin();
+        return;
+      }
+      const player = versusState.currentPool.players.find(candidate => isVersusPlayerAvailable(candidate));
+      if (!player) return;
+      versusState.pendingPlayerId = player.id;
+      const slot = getVersusSlots(versusState.teams[versusState.picker], player)[0];
+      if (slot) placeVersusPlayer(slot);
+    } finally {
+      onlineAutoOverride = false;
+    }
   }
 
   function startVersusLineupDrag(teamIndex, orderIndex) {
@@ -1428,8 +1521,8 @@ ${info}
           <tbody>${rows}</tbody>
         </table>
         <div class="versus-outcome">
-          <div class="${game.winner === 0 ? "win" : "lose"}">玩家1<br>${game.winner === 0 ? "WIN" : "LOSE"}</div>
-          <div class="${game.winner === 1 ? "win" : "lose"}">玩家2<br>${game.winner === 1 ? "WIN" : "LOSE"}</div>
+          <div class="${game.winner === 0 ? "win" : "lose"}">${versusPlayerLabel(0)}<br>${game.winner === 0 ? "WIN" : "LOSE"}</div>
+          <div class="${game.winner === 1 ? "win" : "lose"}">${versusPlayerLabel(1)}<br>${game.winner === 1 ? "WIN" : "LOSE"}</div>
         </div>
       </div>
     `;
@@ -1529,11 +1622,18 @@ ${info}
     }));
   }
 
-  function showOnlineMatchup(localTeam, opponentTeam, localIsPlayer1, mode) {
+  function showOnlineMatchup(localTeam, opponentTeam, localIsPlayer1, mode, localNickname, opponentNickname) {
+    onlineVersusMode = false;
+    document.querySelector("#versusView .view-nav h1").textContent = "連線對戰";
     versusState = createVersusState();
     versusState.teams = localIsPlayer1 ? [localTeam, opponentTeam] : [opponentTeam, localTeam];
+    versusState.labels = localIsPlayer1
+      ? [localNickname, opponentNickname]
+      : [opponentNickname, localNickname];
     versusState.mode = mode;
     versusState.finished = true;
+    document.querySelector("#versusTeam1 h2").textContent = versusPlayerLabel(0);
+    document.querySelector("#versusTeam2 h2").textContent = versusPlayerLabel(1);
     renderVersusMode();
     document.getElementById("versusSpinButton").hidden = true;
     document.getElementById("versusSimulateButton").hidden = true;
@@ -1547,8 +1647,15 @@ ${info}
   function renderOnlineSeries(resultHtml) {
     const result = document.getElementById("versusResult");
     result.hidden = false;
-    result.innerHTML = resultHtml;
+    result.innerHTML = `${resultHtml}<div class="online-rematch"><button onclick="searchAgainOnline()">再次搜尋對手</button></div>`;
     document.getElementById("versusPoolInfo").textContent = "連線對戰完成";
+  }
+
+  function renderOnlineDraftSeries(resultHtml) {
+    const result = document.getElementById("versusResult");
+    result.hidden = false;
+    result.innerHTML = `${resultHtml}<div class="online-rematch"><button onclick="searchAgainOnlineDraft()">再次配對選秀對戰</button></div>`;
+    document.getElementById("versusPoolInfo").textContent = "線上選秀對戰完成";
   }
 
   window.selectPlayer = selectPlayer;
@@ -1582,7 +1689,14 @@ ${info}
     getOnlineDraftSnapshot,
     showOnlineMatchup,
     simulateOnlineSeries: simulateVersusSeries,
-    renderOnlineSeries
+    renderOnlineSeries,
+    showStatisticsView,
+    showOnlineDraftMatchView,
+    createOnlineVersusState,
+    startOnlineVersusDraft,
+    importOnlineVersusState,
+    autoOnlineVersusAction,
+    renderOnlineDraftSeries
   };
 
   renderRoster();

@@ -80,18 +80,18 @@ window.DraftConfig = {
   },
   seasonWeights: {
     hitters: {
-      C:  { power: 0.25, contact: 0.25, speed: 0.10, fielding: 0.20, arm: 0.20 },
-      "1B": { power: 0.25, contact: 0.25, speed: 0.15, fielding: 0.25, arm: 0.10 },
-      "2B": { power: 0.25, contact: 0.25, speed: 0.20, fielding: 0.20, arm: 0.10 },
-      "3B": { power: 0.25, contact: 0.25, speed: 0.10, fielding: 0.15, arm: 0.25 },
-      SS: { power: 0.25, contact: 0.25, speed: 0.20, fielding: 0.20, arm: 0.10 },
-      OF: { power: 0.25, contact: 0.25, speed: 0.20, fielding: 0.15, arm: 0.15 },
-      DH: { power: 0.34, contact: 0.34, speed: 0.32, fielding: 0, arm: 0 }
+      C:  { power: 0.27, contact: 0.27, speed: 0.10, fielding: 0.17, arm: 0.25 },
+      "1B": { power: 0.27, contact: 0.27, speed: 0.15, fielding: 0.25, arm: 0.10 },
+      "2B": { power: 0.25, contact: 0.25, speed: 0.22, fielding: 0.22, arm: 0.10 },
+      "3B": { power: 0.27, contact: 0.27, speed: 0.10, fielding: 0.15, arm: 0.25 },
+      SS: { power: 0.25, contact: 0.25, speed: 0.22, fielding: 0.22, arm: 0.10 },
+      OF: { power: 0.25, contact: 0.25, speed: 0.24, fielding: 0.17, arm: 0.15 },
+      DH: { power: 0.36, contact: 0.36, speed: 0.34, fielding: 0, arm: 0 }
     },
     pitchers: {
       SP: { stamina: 0.30, control: 0.23, velocity: 0.25, breaking: 0.22 },
-      RP: { stamina: 0.15, control: 0.25, velocity: 0.30, breaking: 0.30 },
-      CP: { stamina: 0.10, control: 0.25, velocity: 0.35, breaking: 0.30 }
+      RP: { stamina: 0.15, control: 0.25, velocity: 0.32, breaking: 0.32 },
+      CP: { stamina: 0.10, control: 0.25, velocity: 0.35, breaking: 0.35 }
     }
   },
   simulation: {

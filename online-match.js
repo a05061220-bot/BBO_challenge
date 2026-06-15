@@ -8,6 +8,14 @@
   let playerListener;
   let matchListener;
   let matching = false;
+  let nickname = localStorage.getItem("bbo-online-nickname") || "";
+
+  function cleanNickname(value) {
+    return String(value || "")
+      .replace(/[^\p{L}\p{N}_ -]/gu, "")
+      .trim()
+      .slice(0, 16);
+  }
 
   function configured() {
     const config = window.BBOFirebaseConfig || {};
@@ -42,9 +50,17 @@
 
   async function openOnlineMode() {
     await window.BBOOnlineMatch.leave();
+    const enteredNickname = prompt("請輸入連線對戰暱稱（最多 16 字）", nickname);
+    if (enteredNickname === null) return;
+    nickname = cleanNickname(enteredNickname);
+    if (!nickname) {
+      alert("請輸入有效的暱稱");
+      return;
+    }
+    localStorage.setItem("bbo-online-nickname", nickname);
     const mode = document.getElementById("onlineModeSelect")?.value || "free";
     window.BBOGame.startOnlineDraft(mode);
-    setStatus(`${{ free: "自由", minor: "職業二軍", amateur: "業餘" }[mode]}頻道：完成選秀後即可尋找對手`);
+    setStatus(`${nickname}｜${{ free: "自由", minor: "職業二軍", amateur: "業餘" }[mode]}頻道：完成選秀後即可尋找對手`);
   }
 
   async function findOnlineOpponent() {
@@ -63,7 +79,7 @@
       queueRef = database.ref(`matchQueue/${snapshot.mode}/${uid}`);
       await playerRef.onDisconnect().remove();
       await queueRef.onDisconnect().remove();
-      await playerRef.set({ uid, mode: snapshot.mode, team: snapshot.team, state: "matching" });
+      await playerRef.set({ uid, nickname, mode: snapshot.mode, team: snapshot.team, state: "matching" });
       await queueRef.set({ uid, createdAt: firebase.database.ServerValue.TIMESTAMP });
       listenForAssignment();
       await tryCreateMatch(snapshot.mode, snapshot.team);
@@ -98,6 +114,8 @@
       const match = {
         player1: uid,
         player2: opponentUid,
+        nickname1: nickname,
+        nickname2: opponent.nickname || "匿名玩家",
         mode,
         team1: localTeam,
         team2: opponent.team,
@@ -143,11 +161,15 @@
         return;
       }
       const localIsPlayer1 = match.player1 === uid;
+      const localNickname = localIsPlayer1 ? match.nickname1 : match.nickname2;
+      const opponentNickname = localIsPlayer1 ? match.nickname2 : match.nickname1;
       window.BBOGame.showOnlineMatchup(
         localIsPlayer1 ? match.team1 : match.team2,
         localIsPlayer1 ? match.team2 : match.team1,
         localIsPlayer1,
-        match.mode
+        match.mode,
+        localNickname || nickname,
+        opponentNickname || "匿名玩家"
       );
       if (match.resultHtml) {
         window.BBOGame.renderOnlineSeries(match.resultHtml);
@@ -164,6 +186,11 @@
     setStatus("已取消匹配");
     if (queueRef) await queueRef.remove().catch(() => {});
     if (playerRef) await playerRef.remove().catch(() => {});
+  }
+
+  async function searchAgainOnline() {
+    await leave();
+    await findOnlineOpponent();
   }
 
   async function leave() {
@@ -185,5 +212,6 @@
   window.openOnlineMode = openOnlineMode;
   window.findOnlineOpponent = findOnlineOpponent;
   window.cancelOnlineMatch = cancelOnlineMatch;
+  window.searchAgainOnline = searchAgainOnline;
   window.BBOOnlineMatch = { leave };
 })();

@@ -86,6 +86,26 @@ grid-template-columns:repeat(3,minmax(0,1fr));
 gap:12px;
 }
 
+.home-mode-group{
+margin-top:18px;
+padding:16px;
+border:1px solid rgba(245,200,76,.18);
+border-radius:16px;
+background:rgba(8,18,42,.45);
+text-align:left;
+}
+
+.home-mode-group h2{
+margin:0 0 4px;
+color:var(--gold-soft);
+font-size:20px;
+}
+
+.home-mode-group p{
+margin:0 0 12px;
+font-size:12px;
+}
+
 .home-tools{
 margin-top:18px;
 padding-top:18px;
@@ -102,7 +122,67 @@ color:var(--gold-soft);
 .tool-btn{
 width:100%;
 min-height:58px;
+margin-bottom:12px;
 background:linear-gradient(180deg,#9bdac7,#58a990);
+}
+
+.statistics-grid{
+display:grid;
+grid-template-columns:repeat(3,minmax(0,1fr));
+gap:12px;
+}
+
+.statistics-card{
+padding:18px;
+border-radius:14px;
+background:rgba(8,18,42,.72);
+border:1px solid rgba(255,255,255,.08);
+}
+
+.statistics-card h2{
+margin-top:0;
+color:var(--gold-soft);
+}
+
+.statistics-card div{
+display:flex;
+justify-content:space-between;
+padding:8px 0;
+border-bottom:1px solid rgba(255,255,255,.08);
+color:var(--muted);
+}
+
+.statistics-card strong{
+color:#fff;
+}
+
+.match-waiting{
+max-width:520px;
+margin:14vh auto 0;
+padding:32px;
+text-align:center;
+}
+
+.matching-spinner{
+width:54px;
+height:54px;
+margin:24px auto;
+border:6px solid rgba(255,255,255,.14);
+border-top-color:#77e6b0;
+border-radius:50%;
+animation:matching-spin .9s linear infinite;
+}
+
+.matching-details{
+display:flex;
+justify-content:center;
+gap:10px;
+margin:16px 0;
+color:var(--gold-soft);
+}
+
+@keyframes matching-spin{
+to{transform:rotate(360deg);}
 }
 
 .versus-btn{
@@ -118,6 +198,14 @@ width:100%;
 min-height:68px;
 margin-bottom:12px;
 background:linear-gradient(180deg,#65d5ff,#3476d4);
+color:#fff;
+}
+
+.online-draft-btn{
+width:100%;
+min-height:68px;
+margin-bottom:12px;
+background:linear-gradient(180deg,#77e6b0,#27936a);
 color:#fff;
 }
 
@@ -1090,6 +1178,36 @@ font-weight:700;
 margin-top:6px;
 }
 
+.ability-name-bar{
+--ability-color:#465574;
+display:block;
+width:100%;
+background:linear-gradient(
+to right,
+var(--ability-color) 0,
+var(--ability-color) var(--ability-width),
+rgba(70,85,116,.2) var(--ability-width),
+rgba(70,85,116,.2) 100%
+) !important;
+}
+
+.ability-name-bar.card-blue{--ability-color:#2657a6;}
+.ability-name-bar.card-yellow{--ability-color:#a9770d;}
+.ability-name-bar.card-red{--ability-color:#a92d3c;}
+.ability-name-bar.card-purple{--ability-color:#59308d;}
+
+.online-rematch{
+margin-top:14px;
+text-align:center;
+}
+
+.app-version{
+padding:16px;
+text-align:center;
+color:var(--muted);
+font-size:11px;
+}
+
 .simulation-note{
 margin-top:14px;
 text-align:center;
@@ -1119,7 +1237,8 @@ flex:unset;
 
 @media(max-width:900px){
 .home-rules,
-.home-actions{
+.home-actions,
+.statistics-grid{
 grid-template-columns:1fr;
 }
 .player-list{
@@ -1151,14 +1270,24 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <div class="home-rule"><h3>抽選規則</h3><span>每輪隨機年度與球隊；整場可各使用一次換年份及換球隊。</span></div>
 <div class="home-rule"><h3>模擬球季</h3><span>依球員能力與守位權重換算隊伍分數及 120 場戰績。</span></div>
 </div>
+<div class="home-mode-group">
+<h2>120 勝挑戰</h2>
+<p>選擇卡片限制，建立陣容並挑戰 120 場球季。</p>
 <div class="home-actions">
 <button class="channel-btn" onclick="enterGame('minor')">職業二軍頻道<br><small>紫卡最多2位，紅紫最多10位</small></button>
 <button class="channel-btn amateur" onclick="enterGame('amateur')">業餘頻道<br><small>紫卡最多1位，紅紫最多6位</small></button>
 <button class="channel-btn free" onclick="enterGame('free')">自由頻道<br><small>紅卡、紫卡數量不限</small></button>
 </div>
+</div>
 <div class="home-tools">
 <h2>雙人遊戲</h2>
-<button class="versus-btn" onclick="openVersusMode()">對戰模式<br><small>兩位玩家輪流選秀，進行三戰兩勝</small></button>
+<button class="versus-btn" onclick="openVersusMode()">單機對戰<br><small>兩位玩家共用裝置輪流選秀，進行三戰兩勝</small></button>
+<button class="online-draft-btn" onclick="openOnlineDraftMode()">選秀對戰<br><small>線上同步選秀，每次操作限時 15 秒</small></button>
+<select id="onlineDraftModeSelect" class="versus-mode-select" aria-label="選秀對戰頻道">
+<option value="free">自由頻道</option>
+<option value="minor">職業二軍頻道</option>
+<option value="amateur">業餘頻道</option>
+</select>
 <button class="online-btn" onclick="openOnlineMode()">連線對戰<br><small>先完成選秀，再尋找線上對手</small></button>
 <select id="onlineModeSelect" class="versus-mode-select" aria-label="連線對戰頻道">
 <option value="free">自由頻道</option>
@@ -1167,6 +1296,7 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 </select>
 <h2>資料工具</h2>
 <button class="tool-btn" onclick="openPlayerQuery()">球員查詢<br><small>依聯盟、年度與球隊瀏覽完整數值</small></button>
+<button class="tool-btn" onclick="openStatistics()">統計數據<br><small>查看各頻道完成挑戰後的隊伍分數統計</small></button>
 </div>
 </div>
 </section>
@@ -1174,7 +1304,7 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <section id="versusView" class="versus-shell" hidden>
 <div class="view-nav">
 <button onclick="showHome()">← 首頁</button>
-<h1>對戰模式</h1>
+<h1>單機對戰</h1>
 </div>
 <div class="versus-layout">
 <div id="versusTeam1" class="card versus-team">
@@ -1224,6 +1354,29 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 </div>
 <div id="querySummary" class="query-summary"></div>
 <div id="queryResults" class="query-results"></div>
+</div>
+</section>
+
+<section id="statisticsView" class="query-shell" hidden>
+<div class="view-nav">
+<button onclick="showHome()">← 首頁</button>
+<h1>120 勝挑戰統計</h1>
+</div>
+<div id="statisticsResults" class="statistics-grid"></div>
+</section>
+
+<section id="onlineDraftMatchView" class="query-shell" hidden>
+<div class="card match-waiting">
+<h1>選秀對戰配對</h1>
+<div class="matching-spinner" aria-hidden="true"></div>
+<div id="onlineDraftMatchStatus" class="info">正在尋找對手...</div>
+<div class="matching-details">
+<span id="onlineDraftMatchNickname"></span>
+<span>｜</span>
+<span id="onlineDraftMatchMode"></span>
+</div>
+<p>配對成功後將自動進入選秀，每次 SPIN 與選人限時 15 秒。</p>
+<button onclick="cancelOnlineDraftMatch()">取消配對並返回首頁</button>
 </div>
 </section>
 
@@ -1338,13 +1491,16 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 </div>
 
 </div>
+<footer class="app-version">BBO Challenge v1.2.3</footer>
 <script src="config.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
+<script src="statistics.js"></script>
 <script src="app.js"></script>
 <script src="online-match.js"></script>
+<script src="online-draft.js"></script>
 
 </body>
 </html>

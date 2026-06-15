@@ -1,0 +1,45 @@
+{
+  "database": {
+    "rules": "firebase-database.rules.json"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "firebase-database.rules.json",
+      "FIREBASE_SETUP.md",
+      "DATA_METHOD.md",
+      "README.md",
+      "generate-bbo-data.ps1",
+      "firebase-debug.log",
+      "skills-lock.json",
+      "**/.*",
+      ".agents/**",
+      ".firebase/**",
+      ".github/**",
+      "**/node_modules/**",
+      "**/*.exe",
+      "**/*.msi",
+      "**/*.dll",
+      "**/*.so",
+      "**/*.bat",
+      "**/*.cmd",
+      "**/*.accdb",
+      "**/*.mdb",
+      "**/*.accde",
+      "**/*.accdr",
+      "**/*.xlsx",
+      "BBO_Search/*.ini",
+      "BBO_Search/*.ps1",
+      "BBO_Search/*.txt",
+      "BBO_Search/tml-data.json",
+      "public/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
