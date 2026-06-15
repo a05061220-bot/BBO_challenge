@@ -1285,13 +1285,13 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <button class="online-draft-btn" onclick="openOnlineDraftMode()">選秀對戰<br><small>線上同步選秀，每次操作限時 15 秒</small></button>
 <select id="onlineDraftModeSelect" class="versus-mode-select" aria-label="選秀對戰頻道">
 <option value="free">自由頻道</option>
-<option value="minor">職業二軍頻道</option>
+<option value="minor" selected>職業二軍頻道</option>
 <option value="amateur">業餘頻道</option>
 </select>
 <button class="online-btn" onclick="openOnlineMode()">連線對戰<br><small>先完成選秀，再尋找線上對手</small></button>
 <select id="onlineModeSelect" class="versus-mode-select" aria-label="連線對戰頻道">
 <option value="free">自由頻道</option>
-<option value="minor">職業二軍頻道</option>
+<option value="minor" selected>職業二軍頻道</option>
 <option value="amateur">業餘頻道</option>
 </select>
 <h2>資料工具</h2>
@@ -1316,7 +1316,7 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <div class="versus-actions">
 <select id="versusModeSelect" class="versus-mode-select" onchange="setVersusMode(this.value)">
 <option value="free">自由頻道</option>
-<option value="minor">職業二軍頻道</option>
+<option value="minor" selected>職業二軍頻道</option>
 <option value="amateur">業餘頻道</option>
 </select>
 <button id="versusSpinButton" onclick="versusSpin()">🎲 SPIN</button>
@@ -1392,7 +1392,7 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <div>
 
 <div class="card">
-<script src="BBO_Search/bbo-data.js?v=1.2.8"></script>
+<script src="BBO_Search/bbo-data.js?v=1.2.9"></script>
 
 <div class="topbar">
 
@@ -1491,16 +1491,16 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 </div>
 
 </div>
-<footer class="app-version">BBO Challenge v1.2.8</footer>
-<script src="config.js?v=1.2.8"></script>
+<footer class="app-version">BBO Challenge v1.2.9</footer>
+<script src="config.js?v=1.2.9"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-<script src="firebase-config.js?v=1.2.8"></script>
-<script src="statistics.js?v=1.2.8"></script>
-<script src="app.js?v=1.2.8"></script>
-<script src="online-match.js?v=1.2.8"></script>
-<script src="online-draft.js?v=1.2.8"></script>
+<script src="firebase-config.js?v=1.2.9"></script>
+<script src="statistics.js?v=1.2.9"></script>
+<script src="app.js?v=1.2.9"></script>
+<script src="online-match.js?v=1.2.9"></script>
+<script src="online-draft.js?v=1.2.9"></script>
 
 </body>
 </html>

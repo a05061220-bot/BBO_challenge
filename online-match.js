@@ -58,7 +58,7 @@
       return;
     }
     localStorage.setItem("bbo-online-nickname", nickname);
-    const mode = document.getElementById("onlineModeSelect")?.value || "free";
+    const mode = document.getElementById("onlineModeSelect")?.value || "minor";
     window.BBOGame.startOnlineDraft(mode);
     setStatus(`${nickname}｜${{ free: "自由", minor: "職業二軍", amateur: "業餘" }[mode]}頻道：完成選秀後即可尋找對手`);
   }

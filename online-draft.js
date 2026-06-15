@@ -6,7 +6,7 @@
     ? globalThis.crypto.randomUUID().replaceAll("-", "")
     : `${Date.now()}_${Math.random().toString(36).slice(2)}`;
   let nickname = localStorage.getItem("bbo-online-nickname") || "";
-  let mode = "free";
+  let mode = "minor";
   let playerRef;
   let queueRef;
   let queueModeRef;
@@ -59,7 +59,7 @@
     nickname = cleanNickname(entered);
     if (!nickname) return alert("請輸入有效的暱稱");
     localStorage.setItem("bbo-online-nickname", nickname);
-    mode = document.getElementById("onlineDraftModeSelect")?.value || "free";
+    mode = document.getElementById("onlineDraftModeSelect")?.value || "minor";
     document.getElementById("onlineDraftMatchNickname").textContent = nickname;
     document.getElementById("onlineDraftMatchMode").textContent = {
       free: "自由頻道",

@@ -1322,7 +1322,7 @@ ${info}
   }
 
   function resetVersusMode() {
-    const selectedMode = document.getElementById("versusModeSelect")?.value || "free";
+    const selectedMode = document.getElementById("versusModeSelect")?.value || "minor";
     versusState = createVersusState();
     versusState.mode = selectedMode;
     document.querySelector("#versusTeam1 h2").textContent = "玩家1";
