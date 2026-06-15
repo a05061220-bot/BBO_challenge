@@ -1687,6 +1687,7 @@ ${info}
   window.enterGame = enterGame;
   window.showHome = showHome;
   window.openPlayerQuery = openPlayerQuery;
+  window.populateQueryYears = populateQueryYears;
   window.populateQueryTeams = populateQueryTeams;
   window.renderPlayerQuery = renderPlayerQuery;
   window.setQueryPlayerFilter = setQueryPlayerFilter;
