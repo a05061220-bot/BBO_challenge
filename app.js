@@ -85,6 +85,26 @@
     return String(Number(year) % 100).padStart(2, "0");
   }
 
+  function queryTeamLabel(pool) {
+    return pool.league === "Team Taiwan" ? "WBC Team Taiwan" : pool.team;
+  }
+
+  function positionMatchesFilter(player, filter) {
+    if (filter === "ALL") {
+      return true;
+    }
+
+    if (player.type === "hitter") {
+      return player.positions.includes(filter);
+    }
+
+    return player.role === filter;
+  }
+
+  function getQueryPools() {
+    return TEAMS.filter(pool => Array.isArray(pool.players) && pool.players.length > 0);
+  }
+
   function cardTypeClass(cardType) {
     return {
       "藍": "card-blue",
@@ -312,6 +332,7 @@
   let gameMode = "minor";
   let onlineDraftMode = false;
   let queryPlayerFilter = "all";
+  let queryPositionFilter = "ALL";
   let queryPage = 1;
   const queryPageSize = 60;
   let currentPool = null;
@@ -616,6 +637,7 @@ ${info}
     ["homeView", "gameView", "queryView", "statisticsView", "onlineDraftMatchView", "versusView"].forEach(id => {
       document.getElementById(id).hidden = id !== viewId;
     });
+    window.scrollTo({ top: 0, behavior: "auto" });
   }
 
   function showStatisticsView() {
@@ -682,15 +704,11 @@ ${info}
 
   function populateQueryYears() {
     queryPage = 1;
-    const league = document.getElementById("queryLeague").value;
     const yearSelect = document.getElementById("queryYear");
-    const years = [...new Set(TEAMS
+    const years = [...new Set(getQueryPools()
       .filter(pool =>
-        pool.league === league &&
         Number.isInteger(pool.year) &&
-        pool.year > 0 &&
-        Array.isArray(pool.players) &&
-        pool.players.length > 0
+        pool.year > 0
       )
       .map(pool => pool.year))]
       .sort((left, right) => right - left);
@@ -704,47 +722,68 @@ ${info}
 
   function populateQueryTeams() {
     queryPage = 1;
-    const league = document.getElementById("queryLeague").value;
     const yearValue = document.getElementById("queryYear").value;
     const year = Number(yearValue);
     const teamSelect = document.getElementById("queryTeam");
-    const teams = TEAMS
+    const teams = getQueryPools()
       .filter(pool =>
-        pool.league === league &&
-        (yearValue === "ALL" || pool.year === year) &&
-        Array.isArray(pool.players) &&
-        pool.players.length > 0
+        yearValue === "ALL" || pool.year === year
       )
-      .map(pool => pool.team)
+      .map(pool => queryTeamLabel(pool))
       .filter((team, index, items) => items.indexOf(team) === index)
       .sort((left, right) => left.localeCompare(right, "zh-Hant"));
     teamSelect.innerHTML = teams.length
       ? `<option value="ALL">ALL 球隊</option>${teams.map(team => `<option value="${team}">${team}</option>`).join("")}`
       : '<option value="">無可選球隊</option>';
     teamSelect.disabled = teams.length === 0;
+    populateQueryPositions();
+  }
+
+  function populateQueryPositions() {
+    const positionSelect = document.getElementById("queryPosition");
+    const hitterOptions = [
+      ["ALL", "ALL 守位"],
+      ["C", "捕手 C"],
+      ["1B", "一壘 1B"],
+      ["2B", "二壘 2B"],
+      ["3B", "三壘 3B"],
+      ["SS", "游擊 SS"],
+      ["OF", "外野 OF"]
+    ];
+    const pitcherOptions = [
+      ["ALL", "ALL 守位"],
+      ["SP", "先發 SP"],
+      ["RP", "中繼 RP"],
+      ["CP", "終結 CP"]
+    ];
+    const options = queryPlayerFilter === "hitter"
+      ? hitterOptions
+      : queryPlayerFilter === "pitcher"
+        ? pitcherOptions
+        : [...hitterOptions, ...pitcherOptions.slice(1)];
+    positionSelect.innerHTML = options.map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+    queryPositionFilter = options.some(([value]) => value === queryPositionFilter) ? queryPositionFilter : "ALL";
+    positionSelect.value = queryPositionFilter;
     renderPlayerQuery();
   }
 
   function renderPlayerQuery() {
-    const league = document.getElementById("queryLeague").value;
     const yearValue = document.getElementById("queryYear").value;
     const year = Number(yearValue);
     const team = document.getElementById("queryTeam").value;
-    const pools = TEAMS.filter(candidate =>
-      candidate.league === league &&
+    const position = document.getElementById("queryPosition").value;
+    const pools = getQueryPools().filter(candidate =>
       (yearValue === "ALL" || candidate.year === year) &&
-      (team === "ALL" || candidate.team === team) &&
-      Array.isArray(candidate.players) &&
-      candidate.players.length > 0
+      (team === "ALL" || queryTeamLabel(candidate) === team)
     );
     const players = pools.flatMap(pool => pool.players).filter(player => {
       if (queryPlayerFilter === "hitter") return player.type === "hitter";
       if (queryPlayerFilter === "pitcher") return player.type === "pitcher";
       return true;
-    }).sort(compareDraftPlayers);
+    }).filter(player => positionMatchesFilter(player, position))
+      .sort(compareDraftPlayers);
     if (!pools.length) {
-      document.getElementById("querySummary").textContent =
-        league === "TML" ? "尚未匯入 TML 球員資料" : `${league} 尚無可查詢資料`;
+      document.getElementById("querySummary").textContent = "目前沒有符合條件的球隊資料";
       document.getElementById("queryResults").innerHTML = "";
       document.getElementById("queryPagination").innerHTML = "";
       return;
@@ -755,8 +794,9 @@ ${info}
     const pagePlayers = players.slice((queryPage - 1) * queryPageSize, queryPage * queryPageSize);
     const yearLabel = yearValue === "ALL" ? "ALL 年度" : year;
     const teamLabel = team === "ALL" ? "ALL 球隊" : team;
+    const positionLabel = position === "ALL" ? "ALL 守位" : position;
     document.getElementById("querySummary").textContent =
-      `${league} ${yearLabel} ${teamLabel}，共 ${players.length} 位球員，顯示第 ${queryPage}/${totalPages} 頁`;
+      `${yearLabel} ${teamLabel} ${positionLabel}，共 ${players.length} 位球員，顯示第 ${queryPage}/${totalPages} 頁`;
     document.getElementById("queryResults").innerHTML = pagePlayers.map(player => `
       <div class="player query-player">
         <b class="player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}</b>
@@ -777,6 +817,12 @@ ${info}
     document.querySelectorAll("[data-query-filter]").forEach(button => {
       button.classList.toggle("active", button.dataset.queryFilter === filter);
     });
+    populateQueryPositions();
+  }
+
+  function setQueryPositionFilter(filter) {
+    queryPositionFilter = filter;
+    queryPage = 1;
     renderPlayerQuery();
   }
 
@@ -1056,7 +1102,7 @@ ${info}
     );
   }
 
-  function simulateSeason() {
+  async function simulateSeason() {
     try {
       const hitterEntries = Object.entries(roster.hitters);
       const hitters = hitterEntries.map(([, player]) => player);
@@ -1110,7 +1156,13 @@ ${info}
         hitterEntries,
         pitcherEntries
       });
-      window.BBOStats?.record({ mode: gameMode, score, wins, losses });
+      let nickname = "";
+      const highestEntry = await window.BBOStats?.getHighestScore?.(gameMode);
+      if (!highestEntry || score > Number(highestEntry.score || 0)) {
+        const input = window.prompt("恭喜刷新本頻道最高分！請輸入你的暱稱：", "");
+        nickname = window.BBOStats?.sanitizeNickname?.(input) || "匿名玩家";
+      }
+      window.BBOStats?.record({ mode: gameMode, score, wins, losses, nickname });
     } catch (error) {
       console.error("模擬球季失敗", error);
       alert(`模擬球季失敗：${error.message}`);
@@ -1781,6 +1833,7 @@ ${info}
   window.openPlayerQuery = openPlayerQuery;
   window.populateQueryYears = populateQueryYears;
   window.populateQueryTeams = populateQueryTeams;
+  window.setQueryPositionFilter = setQueryPositionFilter;
   window.renderPlayerQuery = renderPlayerQuery;
   window.setQueryPage = setQueryPage;
   window.setQueryPlayerFilter = setQueryPlayerFilter;

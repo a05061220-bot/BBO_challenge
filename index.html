@@ -283,7 +283,7 @@ font-weight:700;
 
 .query-results{
 display:grid;
-grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
 gap:7px;
 }
 
@@ -927,16 +927,17 @@ opacity:.78;
 }
 
 .stats{
-margin-top:6px;
-line-height:1.45;
+margin-top:5px;
+line-height:1.2;
 color:#fff;
 }
 
 .stats-grid{
 display:grid;
 grid-template-columns:repeat(2,minmax(76px,1fr));
-gap:2px 10px;
-padding:5px 7px;
+grid-auto-rows:min-content;
+gap:1px 9px;
+padding:3px 6px;
 border-radius:8px;
 background:rgba(2,8,20,.38);
 font-size:12px;
@@ -944,8 +945,12 @@ font-size:12px;
 
 .stat-item{
 display:flex;
+align-items:center;
 justify-content:space-between;
-gap:10px;
+gap:8px;
+min-height:15px;
+padding:0;
+line-height:1.1;
 color:#b8c3db;
 }
 
@@ -1281,8 +1286,394 @@ color:var(--muted);
 font-size:12px;
 }
 
+/* Local UI preview: stadium/card-game skin. */
+body{
+background:
+radial-gradient(circle at 50% -10%, rgba(105,160,255,.26), transparent 34%),
+radial-gradient(circle at 16% 18%, rgba(245,200,76,.12), transparent 28%),
+linear-gradient(180deg, #071225 0%, #07182f 48%, #04101f 100%);
+}
+
+body::before{
+content:"";
+position:fixed;
+inset:0;
+pointer-events:none;
+background:
+linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+background-size:48px 48px;
+mask-image:linear-gradient(180deg, rgba(0,0,0,.75), transparent 74%);
+}
+
+.home-shell{
+max-width:1240px;
+padding:34px 18px;
+}
+
+.home-hero{
+position:relative;
+overflow:hidden;
+padding:0;
+text-align:left;
+background:
+linear-gradient(135deg, rgba(15,35,73,.98), rgba(6,18,39,.98) 58%, rgba(4,12,26,.98)),
+radial-gradient(circle at 78% 18%, rgba(245,200,76,.22), transparent 28%);
+border-color:rgba(245,200,76,.26);
+}
+
+.home-hero::before{
+content:"120-0";
+position:absolute;
+right:24px;
+top:14px;
+font-size:104px;
+font-weight:1000;
+letter-spacing:.02em;
+color:rgba(255,255,255,.035);
+}
+
+.home-hero::after{
+content:"";
+position:absolute;
+right:-80px;
+bottom:-120px;
+width:360px;
+height:360px;
+border-radius:50%;
+border:22px solid rgba(255,255,255,.065);
+box-shadow:inset 0 0 0 5px rgba(245,200,76,.08);
+}
+
+.home-hero > h1,
+.home-hero > p,
+.home-rules,
+.home-mode-group,
+.home-tools{
+position:relative;
+z-index:1;
+}
+
+.home-hero > h1{
+margin:0;
+padding:30px 34px 0;
+text-align:left;
+font-size:clamp(34px, 5vw, 62px);
+line-height:1;
+letter-spacing:.02em;
+text-transform:uppercase;
+color:#fff;
+text-shadow:0 4px 0 rgba(0,0,0,.24), 0 0 22px rgba(245,200,76,.22);
+}
+
+.home-hero > p{
+margin:12px 34px 0;
+max-width:640px;
+color:#c9d5ee;
+font-size:15px;
+line-height:1.7;
+}
+
+.home-rules{
+margin:24px 34px 0;
+}
+
+.home-rule{
+background:rgba(5,15,33,.72);
+border-color:rgba(255,255,255,.1);
+box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.home-mode-group,
+.home-tools{
+margin:24px 34px;
+padding:18px;
+background:rgba(3,12,28,.62);
+border:1px solid rgba(245,200,76,.22);
+border-radius:20px;
+box-shadow:inset 0 1px 0 rgba(255,255,255,.07);
+}
+
+.home-mode-group h2,
+.home-tools h2,
+.card h2{
+letter-spacing:.04em;
+}
+
+button,
+.channel-btn,
+.versus-btn,
+.online-btn,
+.online-draft-btn,
+.tool-btn{
+position:relative;
+overflow:hidden;
+border:1px solid rgba(255,255,255,.2);
+box-shadow:0 10px 0 rgba(0,0,0,.18), 0 16px 30px rgba(0,0,0,.22);
+transition:transform .12s ease, filter .12s ease, box-shadow .12s ease;
+}
+
+button::before{
+content:"";
+position:absolute;
+inset:0;
+background:linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+transform:translateX(-110%);
+transition:transform .35s ease;
+}
+
+button:hover{
+opacity:1;
+filter:saturate(1.08) brightness(1.04);
+transform:translateY(-1px);
+}
+
+button:hover::before{
+transform:translateX(110%);
+}
+
+button:disabled{
+transform:none;
+}
+
+.channel-btn,
+.versus-btn,
+.online-btn,
+.online-draft-btn,
+.tool-btn{
+text-align:left;
+padding:18px 20px;
+border-radius:18px;
+font-size:18px;
+}
+
+.channel-btn small,
+.versus-btn small,
+.online-btn small,
+.online-draft-btn small,
+.tool-btn small{
+display:block;
+margin-top:5px;
+opacity:.86;
+font-weight:700;
+}
+
+.container{
+max-width:1600px;
+}
+
+.view-nav{
+padding:10px 14px;
+border:1px solid rgba(245,200,76,.18);
+border-radius:18px;
+background:rgba(4,12,28,.68);
+box-shadow:0 12px 28px rgba(0,0,0,.18);
+}
+
+.view-nav h1{
+font-size:24px;
+text-align:right;
+}
+
+.layout{
+display:grid;
+grid-template-columns:minmax(620px, 1.08fr) minmax(430px, .92fr);
+gap:18px;
+align-items:start;
+}
+
+.layout > div:first-child,
+.layout > div:last-child{
+order:unset;
+flex:unset;
+}
+
+.card{
+background:
+linear-gradient(180deg, rgba(17,39,79,.96), rgba(7,19,43,.98)),
+repeating-linear-gradient(45deg, rgba(255,255,255,.025) 0 1px, transparent 1px 9px);
+border:1px solid rgba(245,200,76,.14);
+box-shadow:0 18px 45px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+#teamInfo{
+min-width:min(100%, 460px);
+border-radius:18px;
+border-color:rgba(245,200,76,.72);
+background:
+linear-gradient(180deg, rgba(24,60,120,.96), rgba(7,20,46,.98)),
+linear-gradient(90deg, rgba(245,200,76,.18), transparent);
+}
+
+.actions{
+padding:7px;
+border-radius:16px;
+background:rgba(0,0,0,.18);
+border:1px solid rgba(255,255,255,.07);
+}
+
+.actions button[onclick="spinTeam()"],
+#versusSpinButton{
+font-size:18px;
+letter-spacing:.08em;
+color:#221500;
+background:linear-gradient(180deg, #ffe386, #f3b927);
+}
+
+#selectionInfo{
+background:linear-gradient(90deg, rgba(245,200,76,.14), rgba(62,122,214,.1));
+}
+
+.card-counts,
+.versus-card-counts{
+gap:7px;
+}
+
+.card-count,
+.versus-card-counts .card-count{
+min-width:48px;
+padding:6px 9px;
+border-radius:10px;
+font-size:12px;
+box-shadow:0 5px 14px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.22);
+}
+
+.player-list,
+.query-results,
+.versus-player-list{
+gap:10px;
+scrollbar-color:rgba(245,200,76,.55) rgba(255,255,255,.06);
+}
+
+.player{
+min-height:98px;
+padding:10px 10px 9px;
+border-radius:14px;
+background:
+linear-gradient(180deg, rgba(17,37,73,.97), rgba(8,22,48,.97)),
+linear-gradient(135deg, rgba(255,255,255,.04), transparent 40%);
+border:1px solid rgba(255,255,255,.1);
+box-shadow:0 10px 24px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+.player::after{
+content:"";
+position:absolute;
+right:10px;
+bottom:10px;
+width:34px;
+height:34px;
+border-radius:50%;
+background:
+radial-gradient(circle, rgba(255,255,255,.24) 0 2px, transparent 3px),
+linear-gradient(90deg, transparent 46%, rgba(255,255,255,.16) 47% 53%, transparent 54%),
+rgba(255,255,255,.05);
+opacity:.45;
+}
+
+.player-name,
+.roster-player-name,
+.versus-roster-player{
+display:inline-block;
+border-radius:9px;
+box-shadow:inset 0 1px 0 rgba(255,255,255,.18), 0 3px 10px rgba(0,0,0,.18);
+}
+
+.stats{
+gap:3px;
+}
+
+.stats-grid{
+grid-template-columns:repeat(2,minmax(76px,1fr));
+gap:1px 9px;
+padding:3px 6px;
+}
+
+.stat-item{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:8px;
+min-height:15px;
+padding:0;
+line-height:1.1;
+border-radius:8px;
+background:rgba(0,0,0,.17);
+border:1px solid rgba(255,255,255,.05);
+}
+
+.stat-item span,
+.stat-item strong{
+white-space:nowrap;
+}
+
+.badge,
+.filter-btn,
+.counter{
+box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
+}
+
+.team-grid{
+position:relative;
+border-radius:24px;
+overflow:hidden;
+background:
+radial-gradient(ellipse at 50% 80%, rgba(89,150,74,.75) 0 22%, transparent 23%),
+radial-gradient(ellipse at 50% 52%, rgba(24,94,56,.86) 0 42%, rgba(9,37,31,.96) 43% 100%);
+border:1px solid rgba(245,200,76,.2);
+box-shadow:inset 0 0 70px rgba(0,0,0,.36), 0 14px 34px rgba(0,0,0,.22);
+}
+
+.team-grid::before{
+opacity:.38;
+filter:drop-shadow(0 8px 14px rgba(0,0,0,.22));
+}
+
+.field-slot,
+.pitcher-slot{
+background:rgba(5,16,36,.88);
+border:1px solid rgba(255,255,255,.12);
+box-shadow:0 10px 22px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+.field-slot.empty,
+.pitcher-slot.empty{
+border-style:dashed;
+background:rgba(4,13,29,.68);
+}
+
+.field-slot.occupied,
+.pitcher-slot.occupied{
+border-color:rgba(245,200,76,.55);
+}
+
+.pitcher-board{
+border-radius:20px;
+padding:14px;
+background:rgba(3,12,28,.38);
+border:1px solid rgba(255,255,255,.08);
+}
+
+.pitcher-title{
+text-transform:uppercase;
+letter-spacing:.08em;
+}
+
+.draft-panel{
+position:sticky;
+top:14px;
+}
+
+.result{
+padding:16px;
+border-radius:18px;
+background:rgba(3,12,28,.58);
+border:1px solid rgba(245,200,76,.16);
+}
+
 @media(max-width:1100px){
 .layout{
+display:flex;
 flex-direction:column;
 }
 
@@ -1323,47 +1714,1456 @@ width:92px;
 grid-template-columns:repeat(2,minmax(0,1fr));
 }
 }
+
+/* Closer game-layout preview: make the running page match the mockup direction. */
+@media(min-width:901px){
+.home-hero{
+display:grid;
+grid-template-columns:minmax(0, .95fr) minmax(360px, .72fr);
+grid-template-areas:
+"title modes"
+"desc modes"
+"rules tools";
+gap:18px;
+align-items:start;
+}
+
+.home-hero > h1{grid-area:title;}
+.home-hero > p{grid-area:desc;}
+.home-rules{grid-area:rules;}
+.home-mode-group{grid-area:modes;}
+.home-tools{grid-area:tools;}
+
+.home-mode-group,
+.home-tools{
+margin:28px 30px 0 0;
+}
+
+.home-tools{
+margin-top:0;
+}
+
+.home-rules{
+grid-template-columns:1fr;
+margin:0 0 30px 34px;
+}
+}
+
+.home-mode-group{
+min-height:360px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+}
+
+.home-tools{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:12px;
+align-items:start;
+}
+
+.home-tools h2{
+grid-column:1 / -1;
+margin-top:4px;
+}
+
+.home-tools select{
+width:100%;
+min-height:42px;
+padding:9px 12px;
+border-radius:12px;
+border:1px solid rgba(255,255,255,.16);
+background:#071a38;
+color:#fff;
+}
+
+.home-tools .online-btn,
+.home-tools .online-draft-btn,
+.home-tools .versus-btn,
+.home-tools .tool-btn{
+min-height:92px;
+margin:0;
+}
+
+.channel-btn{
+min-height:108px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+}
+
+body.ui-preview-game #gameView{
+padding-top:20px;
+}
+
+body.ui-preview-game #gameView .view-nav{
+margin-bottom:18px;
+}
+
+body.ui-preview-game #gameView .layout{
+grid-template-columns:minmax(560px, 1fr) minmax(460px, .74fr);
+}
+
+body.ui-preview-game #gameView .layout > div:first-child > .card:first-child{
+position:relative;
+padding-top:74px;
+}
+
+body.ui-preview-game #gameView .layout > div:first-child > .card:first-child::before{
+content:"MY ROSTER";
+position:absolute;
+left:20px;
+top:18px;
+padding:7px 12px;
+border-radius:999px;
+background:rgba(245,200,76,.16);
+border:1px solid rgba(245,200,76,.3);
+color:var(--gold-soft);
+font-size:12px;
+font-weight:900;
+letter-spacing:.16em;
+}
+
+body.ui-preview-game #gameView .layout > div:first-child > .card:first-child::after{
+content:"9 hitters + 7 pitchers";
+position:absolute;
+right:20px;
+top:22px;
+color:rgba(255,255,255,.52);
+font-size:12px;
+font-weight:800;
+letter-spacing:.08em;
+}
+
+body.ui-preview-game #gameView .topbar{
+align-items:center;
+}
+
+body.ui-preview-game #gameView .layout > div:first-child > .card:first-child .topbar{
+position:relative;
+z-index:2;
+margin-bottom:12px;
+}
+
+body.ui-preview-game #draftPanel{
+padding-top:72px;
+}
+
+body.ui-preview-game #draftPanel::before{
+content:"DRAFT POOL";
+position:absolute;
+left:18px;
+top:18px;
+padding:7px 12px;
+border-radius:999px;
+background:rgba(101,213,255,.14);
+border:1px solid rgba(101,213,255,.26);
+color:#9de2ff;
+font-size:12px;
+font-weight:900;
+letter-spacing:.16em;
+}
+
+body.ui-preview-game #draftPanel .topbar{
+position:absolute;
+left:18px;
+right:18px;
+top:48px;
+padding-bottom:12px;
+border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+body.ui-preview-game #draftPanel .topbar h2{
+font-size:18px;
+}
+
+.counter{
+min-width:72px;
+padding:8px 12px;
+border-radius:999px;
+background:rgba(245,200,76,.16);
+border:1px solid rgba(245,200,76,.28);
+color:var(--gold-soft);
+font-weight:900;
+text-align:center;
+}
+
+body.ui-preview-game .player-list{
+grid-template-columns:repeat(auto-fill,minmax(210px,1fr));
+max-height:760px;
+padding:10px 6px 4px 0;
+}
+
+body.ui-preview-game .player{
+border-left-width:6px;
+}
+
+body.ui-preview-game .player:has(.card-purple){border-left-color:#8e5cff;}
+body.ui-preview-game .player:has(.card-red){border-left-color:#ff5567;}
+body.ui-preview-game .player:has(.card-yellow){border-left-color:#f5c84c;}
+body.ui-preview-game .player:has(.card-blue){border-left-color:#56a4ff;}
+
+.player-name{
+padding:6px 8px;
+}
+
+.stats-grid{
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:1px 9px;
+}
+
+.stat-item{
+min-height:15px;
+padding:0;
+line-height:1.1;
+}
+
+body.ui-preview-game .team-grid{
+min-height:560px;
+margin-top:14px;
+}
+
+body.ui-preview-game #fieldRoster{
+position:relative;
+min-height:560px;
+}
+
+body.ui-preview-game .field-slot{
+width:112px;
+min-height:72px;
+}
+
+body.ui-preview-game .pitcher-grid{
+grid-template-columns:repeat(4,minmax(0,1fr));
+}
+
+body.ui-preview-game .pitcher-slot{
+min-height:70px;
+}
+
+body.ui-preview-game #simulationCardTitle{
+display:flex;
+align-items:center;
+gap:8px;
+}
+
+body.ui-preview-game #simulationCardTitle::before{
+content:"";
+width:10px;
+height:10px;
+border-radius:50%;
+background:#77e6b0;
+box-shadow:0 0 12px rgba(119,230,176,.8);
+}
+
+@media(max-width:1100px){
+#gameView .layout{
+display:flex;
+flex-direction:column;
+}
+
+.home-tools{
+grid-template-columns:1fr;
+}
+
+.pitcher-grid{
+grid-template-columns:repeat(2,minmax(0,1fr));
+}
+}
+
+/* Home mockup match: left logo panel + right menu console. */
+.home-shell{
+max-width:1320px;
+min-height:calc(100vh - 46px);
+display:flex;
+align-items:center;
+}
+
+.home-hero{
+width:100%;
+min-height:760px;
+display:grid;
+grid-template-columns:minmax(440px, .95fr) minmax(420px, .9fr);
+grid-template-areas:
+"brand modes";
+gap:22px;
+padding:30px;
+background:
+linear-gradient(90deg, rgba(4,10,23,.42) 0 49%, rgba(245,200,76,.9) 49.7% 50.3%, rgba(4,10,23,.7) 51%),
+radial-gradient(circle at 23% 26%, rgba(255,255,255,.12), transparent 22%),
+linear-gradient(180deg, rgba(10,25,55,.96), rgba(2,8,19,.98));
+border-radius:28px;
+}
+
+.home-hero::before{
+content:"";
+position:absolute;
+inset:0;
+background:
+radial-gradient(circle at 18% 18%, rgba(255,255,255,.18), transparent 15%),
+radial-gradient(circle at 84% 18%, rgba(255,255,255,.14), transparent 14%),
+linear-gradient(180deg, rgba(28,89,57,.18), transparent 54%);
+}
+
+.home-hero::after{
+right:auto;
+left:6%;
+bottom:-170px;
+width:520px;
+height:520px;
+border-width:26px;
+opacity:.55;
+}
+
+.home-brand-panel{
+grid-area:brand;
+position:relative;
+z-index:2;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+min-height:590px;
+padding:18px 18px 26px;
+border-radius:24px;
+background:
+radial-gradient(ellipse at center bottom, rgba(40,117,61,.62), transparent 46%),
+linear-gradient(180deg, rgba(6,18,41,.38), rgba(0,0,0,.12));
+}
+
+.home-brand-panel .home-rules{
+width:min(92%, 560px);
+margin:8px 0 0;
+display:grid;
+grid-template-columns:1fr;
+gap:10px;
+text-align:left;
+}
+
+.home-rules-title{
+width:min(92%, 560px);
+margin:18px 0 0;
+padding:0 4px;
+font-size:20px;
+font-weight:900;
+letter-spacing:.08em;
+color:#ffe49b;
+text-shadow:0 3px 0 rgba(0,0,0,.36);
+}
+
+.home-brand-panel .home-rule{
+padding:12px 14px;
+border-color:rgba(245,200,76,.2);
+background:rgba(3,12,28,.68);
+}
+
+.home-brand-panel .home-rule h3{
+font-size:15px;
+}
+
+.home-brand-panel .home-rule span{
+font-size:12px;
+line-height:1.55;
+color:#c9d5ee;
+}
+
+.home-logo{
+display:block;
+width:min(92%, 520px);
+height:auto;
+filter:drop-shadow(0 22px 34px rgba(0,0,0,.5));
+}
+
+.home-primary-btn{
+width:min(86%, 520px);
+min-height:108px;
+margin-top:10px;
+border-radius:16px;
+font-size:34px;
+line-height:1.15;
+text-align:center;
+color:#fff4c9;
+background:
+linear-gradient(180deg, rgba(133,48,24,.96), rgba(83,22,14,.98)),
+linear-gradient(90deg, rgba(245,200,76,.2), transparent);
+border:2px solid rgba(245,200,76,.65);
+box-shadow:
+0 10px 0 rgba(35,10,4,.9),
+0 18px 36px rgba(0,0,0,.45),
+inset 0 1px 0 rgba(255,255,255,.22);
+text-shadow:0 3px 0 rgba(0,0,0,.45);
+}
+
+.home-primary-btn small{
+font-size:15px;
+color:#ffe9a6;
+}
+
+.home-mode-group{
+grid-area:modes;
+position:relative;
+z-index:2;
+min-height:auto;
+margin:0;
+padding:28px;
+display:grid;
+grid-template-columns:1fr;
+gap:12px;
+align-content:start;
+background:rgba(4,13,31,.72);
+border-radius:24px;
+border:1px solid rgba(255,255,255,.12);
+}
+
+.home-mode-group > h2{
+margin:16px 0 0;
+font-size:24px;
+color:#ffe49b;
+}
+
+.home-mode-group > h2:first-child{
+margin-top:0;
+}
+
+.home-mode-group > p{
+margin:0 0 8px;
+font-size:13px;
+color:#b9c5da;
+}
+
+.home-actions{
+display:grid;
+grid-template-columns:1fr;
+gap:12px;
+}
+
+.home-actions .channel-btn,
+.home-mode-group .versus-btn,
+.home-mode-group .online-draft-btn,
+.home-mode-group .online-btn{
+width:100%;
+min-height:78px;
+margin:0;
+padding-left:92px;
+font-size:24px;
+text-align:left;
+}
+
+.home-actions .channel-btn::after,
+.home-mode-group .versus-btn::after,
+.home-mode-group .online-draft-btn::after,
+.home-mode-group .online-btn::after{
+position:absolute;
+left:24px;
+top:50%;
+transform:translateY(-50%);
+font-size:34px;
+filter:drop-shadow(0 4px 5px rgba(0,0,0,.35));
+}
+
+.home-actions .channel-btn::after{content:"🏆";}
+.home-actions .channel-btn.amateur::after{content:"⚾";}
+.home-actions .channel-btn.free::after{content:"⭐";}
+.home-mode-group .versus-btn::after{content:"⚔";}
+.home-mode-group .online-draft-btn::after{content:"🌐";}
+.home-mode-group .online-btn::after{content:"🎮";}
+
+.home-mode-group select{
+width:100%;
+min-height:42px;
+margin-top:-4px;
+padding:9px 12px;
+border-radius:12px;
+border:1px solid rgba(255,255,255,.18);
+background:#071a38;
+color:#fff;
+}
+
+.home-tools{
+grid-area:auto;
+position:relative;
+z-index:2;
+width:100%;
+box-sizing:border-box;
+margin:2px 0 0;
+padding:14px;
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+justify-content:stretch;
+gap:16px;
+background:linear-gradient(180deg, rgba(234,244,255,.11), rgba(7,20,45,.74));
+border:1px solid rgba(245,200,76,.34);
+border-radius:20px;
+overflow:visible;
+box-shadow:0 16px 36px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.14);
+}
+
+.home-tools h2{
+display:block;
+grid-column:1 / -1;
+margin:0;
+font-size:20px;
+color:#ffe49b;
+}
+
+.home-tools .tool-btn{
+width:100%;
+min-height:76px;
+margin:0;
+border-radius:18px;
+box-shadow:0 10px 0 rgba(0,0,0,.28), 0 18px 28px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.22);
+background:linear-gradient(180deg, #f5d46e, #c88322);
+border:1px solid rgba(255,255,255,.34);
+text-align:center;
+font-size:22px;
+color:#1a1202;
+text-shadow:0 1px 0 rgba(255,255,255,.35);
+}
+
+.home-tools .tool-btn:nth-of-type(2){
+background:linear-gradient(180deg, #8fe4ff, #2e75d7);
+color:#fff;
+text-shadow:0 2px 0 rgba(0,0,0,.32);
+}
+
+.home-tools .tool-btn::after{
+display:block;
+margin-top:6px;
+font-size:12px;
+color:#9fb0ce;
+}
+
+#gameView .layout{
+display:flex;
+gap:18px;
+align-items:stretch;
+}
+
+#gameView .layout > div:first-child{
+order:1;
+flex:1;
+display:flex;
+flex-direction:column;
+gap:18px;
+}
+
+#gameView .layout > div:last-child{
+order:2;
+flex:0 0 48%;
+}
+
+@media(max-width:1100px){
+.home-shell{
+display:block;
+min-height:0;
+}
+
+.home-hero{
+grid-template-columns:1fr;
+grid-template-areas:
+"brand"
+"modes";
+min-height:0;
+}
+
+.home-tools{
+grid-template-columns:1fr;
+}
+
+#gameView .layout{
+flex-direction:column;
+}
+
+#gameView .layout > div:first-child,
+#gameView .layout > div:last-child{
+order:unset;
+flex:unset;
+}
+}
+
+@media(min-width:1101px) and (max-width:1280px){
+.home-hero{
+grid-template-columns:minmax(380px,.9fr) minmax(380px,1fr);
+}
+
+.home-logo{
+width:min(86%, 430px);
+}
+
+.home-primary-btn{
+font-size:28px;
+}
+
+.home-tools{
+grid-template-columns:repeat(2,minmax(0,1fr));
+}
+}
+
+/* Final home lobby skin: red nav + stadium game lobby. */
+#homeView.home-shell{
+position:relative;
+max-width:none;
+width:100%;
+min-height:100vh;
+margin:0;
+padding:74px 48px 42px;
+display:block;
+overflow:hidden;
+background:#071225 url("image/bbo-anime-baseball-bg.png") center center / cover no-repeat;
+}
+
+#homeView.home-shell::before{
+content:none;
+}
+
+#homeView.home-shell::after{
+content:none;
+}
+
+.home-topnav{
+position:absolute;
+z-index:20;
+left:0;
+right:0;
+top:0;
+height:66px;
+display:flex;
+align-items:center;
+gap:10px;
+padding:0 42px;
+background:linear-gradient(180deg, #bb1026, #820819);
+border-bottom:3px solid rgba(255,215,107,.45);
+box-shadow:0 12px 28px rgba(0,0,0,.28);
+}
+
+.home-topnav button{
+min-height:46px;
+padding:8px 15px;
+border:0;
+border-radius:0;
+box-shadow:none;
+background:transparent;
+color:#fff7df;
+font-size:18px;
+font-weight:1000;
+letter-spacing:.05em;
+text-shadow:0 2px 0 rgba(0,0,0,.35);
+white-space:nowrap;
+}
+
+.home-topnav button:first-child{
+color:#ffe173;
+}
+
+.home-topnav button:hover{
+background:rgba(255,255,255,.12);
+transform:none;
+}
+
+#homeView .home-hero{
+position:relative;
+z-index:2;
+width:min(1380px, 100%);
+min-height:calc(100vh - 132px);
+margin:0 auto;
+padding:24px 0 52px;
+display:grid;
+grid-template-columns:minmax(330px, 390px) minmax(220px, 1fr) minmax(380px, 470px);
+grid-template-areas:"brand stage modes";
+align-items:center;
+gap:18px;
+overflow:visible;
+background:transparent;
+border:0;
+box-shadow:none;
+}
+
+#homeView .home-hero::before{
+content:none;
+}
+
+#homeView .home-hero::after{
+content:"";
+position:absolute;
+left:16%;
+right:26%;
+bottom:58px;
+height:28px;
+background:rgba(0,0,0,.24);
+filter:blur(12px);
+border:0;
+border-radius:50%;
+pointer-events:none;
+}
+
+#homeView .home-brand-panel{
+grid-area:brand;
+align-self:start;
+min-height:0;
+padding:0;
+gap:14px;
+justify-content:flex-start;
+background:transparent;
+border-radius:0;
+}
+
+.home-event-card{
+width:100%;
+min-height:160px;
+display:grid;
+grid-template-columns:132px 1fr;
+align-items:center;
+gap:12px;
+padding:14px;
+border-radius:8px;
+background:
+linear-gradient(110deg, rgba(11,54,94,.95), rgba(10,147,166,.88)),
+radial-gradient(circle at 85% 18%, rgba(255,255,255,.28), transparent 22%);
+border:2px solid rgba(255,255,255,.28);
+box-shadow:0 14px 30px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.26);
+}
+
+#homeView .home-logo{
+width:132px;
+filter:drop-shadow(0 8px 12px rgba(0,0,0,.34));
+}
+
+.home-event-card strong{
+display:block;
+font-size:30px;
+line-height:1.05;
+color:#fff;
+text-shadow:0 3px 0 rgba(0,0,0,.35), 0 0 16px rgba(255,231,96,.35);
+}
+
+.home-event-card span{
+display:block;
+margin-top:8px;
+font-size:18px;
+font-weight:900;
+color:#ffe989;
+}
+
+.home-quick-row{
+width:100%;
+display:grid;
+grid-template-columns:repeat(3,minmax(0,1fr));
+gap:8px;
+}
+
+.home-quick-row button{
+min-height:52px;
+padding:8px 6px;
+border-radius:10px;
+background:linear-gradient(180deg, #4d3520, #a16620);
+border:2px solid rgba(255,215,107,.55);
+color:#fff1bb;
+font-size:15px;
+font-weight:1000;
+text-align:center;
+box-shadow:0 8px 14px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.24);
+}
+
+#homeView .home-rules-title{
+width:100%;
+margin:8px 0 -4px;
+padding:9px 12px;
+border-radius:8px;
+background:rgba(3,14,34,.74);
+border:1px solid rgba(102,236,255,.42);
+color:#80f3ff;
+font-size:16px;
+}
+
+#homeView .home-brand-panel .home-rules{
+width:100%;
+margin:0;
+gap:8px;
+}
+
+#homeView .home-brand-panel .home-rule{
+padding:12px;
+border-radius:8px;
+background:linear-gradient(180deg, rgba(9,28,62,.86), rgba(4,12,29,.88));
+border:1px solid rgba(102,236,255,.22);
+box-shadow:0 10px 18px rgba(0,0,0,.18);
+}
+
+#homeView .home-brand-panel .home-rule h3{
+font-size:15px;
+color:#ffe173;
+}
+
+#homeView .home-brand-panel .home-rule span{
+font-size:12px;
+color:#d6e8ff;
+}
+
+#homeView .home-mode-group{
+grid-area:modes;
+align-self:center;
+display:grid;
+grid-template-columns:1fr;
+gap:14px;
+padding:14px;
+background:rgba(3,10,28,.58);
+border:1px solid rgba(255,255,255,.14);
+border-radius:18px;
+box-shadow:0 18px 36px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+#homeView .home-primary-btn{
+grid-column:auto;
+justify-self:end;
+width:min(100%, 390px);
+min-height:104px;
+margin:0 auto 4px;
+padding:16px 34px;
+border-radius:16px 6px 16px 6px;
+background:
+linear-gradient(135deg, transparent 0 7%, rgba(255,255,255,.18) 8% 12%, transparent 13%),
+linear-gradient(180deg, #d5223a, #8a071a);
+border:3px solid #f6d06a;
+color:#fff7df;
+font-size:36px;
+font-weight:1000;
+text-align:center;
+letter-spacing:.04em;
+box-shadow:
+0 12px 0 rgba(94,24,10,.95),
+0 18px 30px rgba(0,0,0,.36),
+inset 0 1px 0 rgba(255,255,255,.32);
+}
+
+#homeView .home-primary-btn::after{
+content:"";
+position:absolute;
+inset:-9px;
+border:2px solid rgba(255,215,107,.62);
+border-radius:20px 8px 20px 8px;
+pointer-events:none;
+}
+
+#homeView .home-primary-btn small{
+display:block;
+margin-top:2px;
+font-size:13px;
+color:#ffe173;
+letter-spacing:.12em;
+}
+
+.home-section{
+display:grid;
+grid-template-columns:1fr;
+gap:10px;
+padding:12px;
+border-radius:14px;
+background:rgba(4,17,42,.78);
+border:1px solid rgba(98,225,255,.22);
+box-shadow:inset 0 1px 0 rgba(255,255,255,.1);
+}
+
+.home-section h2{
+display:flex;
+align-items:center;
+gap:8px;
+margin:0;
+font-size:19px;
+line-height:1;
+color:#ffe173;
+text-shadow:0 2px 0 rgba(0,0,0,.35);
+}
+
+.home-section h2::before{
+content:"";
+width:8px;
+height:22px;
+border-radius:999px;
+background:#ffde59;
+box-shadow:0 0 14px rgba(255,222,89,.66);
+}
+
+.home-section p{
+margin:-2px 0 2px;
+font-size:12px;
+color:#cfe6ff;
+}
+
+#homeView .home-actions{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+}
+
+#homeView .home-actions .channel-btn:first-child{
+grid-column:1 / -1;
+}
+
+#homeView .home-actions .channel-btn,
+#homeView .home-mode-group .versus-btn,
+#homeView .home-mode-group .online-draft-btn,
+#homeView .home-mode-group .online-btn,
+#homeView .home-tools .tool-btn{
+min-height:86px;
+margin:0;
+padding:16px 18px 16px 76px;
+border-radius:8px;
+background:linear-gradient(180deg, rgba(17,41,83,.95), rgba(5,17,42,.96));
+border:1px solid rgba(98,225,255,.3);
+color:#fff;
+font-size:20px;
+font-weight:1000;
+text-align:left;
+box-shadow:0 10px 18px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.14);
+}
+
+#homeView .home-actions .channel-btn::after,
+#homeView .home-mode-group .versus-btn::after,
+#homeView .home-mode-group .online-draft-btn::after,
+#homeView .home-mode-group .online-btn::after{
+left:18px;
+font-size:34px;
+}
+
+.home-versus-grid{
+display:grid;
+grid-template-columns:1fr;
+gap:10px;
+}
+
+.home-online-pair{
+display:grid;
+grid-template-columns:1fr 132px;
+gap:8px;
+align-items:stretch;
+}
+
+.home-online-pair .online-draft-btn,
+.home-online-pair .online-btn{
+min-height:78px;
+}
+
+#homeView .home-mode-group select{
+min-height:100%;
+margin:0;
+padding:8px;
+border-radius:6px;
+background:rgba(2,12,30,.86);
+border-color:rgba(98,225,255,.24);
+font-weight:900;
+text-align:center;
+}
+
+#homeView .home-tools{
+margin:0;
+padding:0;
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px;
+background:transparent;
+border:0;
+box-shadow:none;
+}
+
+#homeView .home-tools .tool-btn{
+padding-left:18px;
+text-align:center;
+background:linear-gradient(180deg, rgba(29,63,104,.95), rgba(5,19,42,.95));
+}
+
+#homeView .home-tools .tool-btn:nth-of-type(2){
+background:linear-gradient(180deg, rgba(37,93,126,.95), rgba(7,33,65,.95));
+}
+
+#homeView .home-mode-group small,
+#homeView .home-tools small{
+font-size:12px;
+color:#b9d8f3;
+}
+
+.home-bottom-status{
+position:absolute;
+z-index:8;
+left:52px;
+right:52px;
+bottom:14px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:14px;
+padding:9px 14px;
+border-radius:4px;
+background:rgba(5,13,28,.72);
+border:1px solid rgba(255,255,255,.18);
+box-shadow:0 8px 20px rgba(0,0,0,.28);
+color:#d9e5f6;
+font-size:13px;
+}
+
+.home-bottom-status strong{
+color:#ffe173;
+}
+
+@media(max-width:1100px){
+#homeView.home-shell{
+padding:78px 18px 70px;
+overflow:auto;
+}
+
+.home-topnav{
+overflow-x:auto;
+padding:0 12px;
+}
+
+.home-topnav button{
+font-size:15px;
+}
+
+#homeView .home-hero{
+min-height:0;
+grid-template-columns:1fr;
+grid-template-areas:
+"brand"
+"modes";
+}
+
+#homeView .home-mode-group,
+#homeView .home-actions,
+#homeView .home-tools,
+.home-online-pair{
+grid-template-columns:1fr;
+}
+
+#homeView .home-actions .channel-btn:first-child,
+#homeView .home-primary-btn,
+#homeView .home-tools{
+grid-column:auto;
+}
+
+.home-bottom-status{
+left:18px;
+right:18px;
+bottom:12px;
+}
+}
+
+/* Restore the in-game draft page to the pre-home-redesign interface. */
+body::before{
+content:none;
+}
+
+body:has(#gameView:not([hidden])){
+background:
+radial-gradient(circle at top, rgba(38,76,150,.35), transparent 34%),
+linear-gradient(180deg, #081127 0%, #09182d 44%, #071225 100%);
+}
+
+#gameView .view-nav{
+padding:0;
+border:0;
+border-radius:0;
+background:transparent;
+box-shadow:none;
+}
+
+#gameView .view-nav h1{
+font-size:inherit;
+text-align:center;
+}
+
+#gameView .layout{
+display:flex;
+gap:18px;
+align-items:stretch;
+}
+
+#gameView .layout > div:first-child{
+order:1;
+flex:1;
+display:flex;
+flex-direction:column;
+gap:18px;
+}
+
+#gameView .layout > div:last-child{
+order:2;
+flex:0 0 48%;
+}
+
+#gameView .card{
+background:linear-gradient(180deg, rgba(17,38,79,.96), rgba(12,29,61,.96));
+border:1px solid rgba(255,255,255,.06);
+border-radius:22px;
+padding:18px;
+box-shadow:0 18px 45px rgba(0,0,0,.28);
+}
+
+#gameView .layout > div:last-child .card{
+min-height:100%;
+}
+
+#gameView .card h2{
+margin-top:0;
+margin-bottom:14px;
+color:var(--gold-soft);
+letter-spacing:normal;
+}
+
+#gameView button{
+background:linear-gradient(180deg, #f6cf63, #e3b735);
+border:none;
+padding:12px 18px;
+border-radius:12px;
+font-weight:700;
+cursor:pointer;
+color:#191919;
+box-shadow:0 8px 22px rgba(245,200,76,.18);
+transition:none;
+}
+
+#gameView button::before{
+content:none;
+}
+
+#gameView button:hover{
+opacity:.96;
+filter:none;
+transform:none;
+}
+
+#gameView button:disabled{
+background:#666;
+cursor:not-allowed;
+box-shadow:none;
+}
+
+#gameView .actions{
+display:flex;
+gap:8px;
+align-items:center;
+flex-wrap:wrap;
+padding:0;
+border-radius:0;
+background:transparent;
+border:0;
+}
+
+#gameView #teamInfo{
+min-width:0;
+padding:12px 18px;
+border-radius:14px;
+border:2px solid rgba(245,200,76,.65);
+background:linear-gradient(180deg, rgba(28,58,112,.96), rgba(11,29,62,.96));
+box-shadow:0 0 0 2px rgba(245,200,76,.08),0 10px 24px rgba(0,0,0,.24);
+color:var(--gold-soft);
+font-size:21px;
+letter-spacing:.04em;
+}
+
+#gameView #selectionInfo{
+background:rgba(245,200,76,.08);
+}
+
+#gameView .card-counts{
+gap:3px;
+}
+
+#gameView .card-count{
+min-width:38px;
+padding:3px 5px;
+border-radius:2px;
+font-size:12px;
+box-shadow:inset 0 0 0 1px rgba(255,255,255,.25);
+}
+
+#gameView .player-list{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(185px,1fr));
+gap:7px;
+margin-top:12px;
+max-height:820px;
+overflow:auto;
+padding-right:4px;
+scrollbar-color:auto;
+}
+
+#gameView .player{
+min-height:0;
+background:rgba(10,25,52,.92);
+padding:10px 10px 9px;
+border-radius:10px;
+border:1px solid rgba(255,255,255,.06);
+box-shadow:none;
+transition:transform .15s ease,border-color .15s ease;
+}
+
+#gameView .player::after{
+content:none;
+}
+
+#gameView .player:hover{
+border-color:var(--gold);
+transform:translateY(-1px);
+}
+
+#gameView .player.selected{
+border-color:#ffd76b;
+box-shadow:0 0 0 1px rgba(245,200,76,.2),0 0 18px rgba(245,200,76,.18);
+background:rgba(17,44,86,.96);
+}
+
+#gameView .player.unavailable{
+background:rgba(34,42,58,.78);
+border-color:rgba(255,255,255,.035);
+filter:saturate(.35);
+cursor:not-allowed;
+}
+
+#gameView .player-name,
+#gameView .roster-player-name{
+display:inline-block;
+border-radius:2px;
+box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);
+}
+
+#gameView .stats{
+gap:initial;
+margin-top:5px;
+line-height:1.2;
+}
+
+#gameView .stats-grid{
+grid-template-columns:repeat(2,minmax(76px,1fr));
+grid-auto-rows:min-content;
+gap:1px 9px;
+padding:3px 6px;
+}
+
+#gameView .stat-item{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:8px;
+min-height:15px;
+padding:0;
+line-height:1.1;
+border-radius:0;
+background:transparent;
+border:0;
+}
+
+#gameView .stat-item span,
+#gameView .stat-item strong{
+white-space:nowrap;
+}
+
+#gameView .badge,
+#gameView .filter-btn,
+#gameView .counter{
+box-shadow:none;
+}
+
+#gameView .team-grid{
+position:relative;
+min-height:0;
+aspect-ratio:1448 / 1086;
+padding:12px;
+border-radius:18px;
+background-image:
+linear-gradient(rgba(4,14,28,.08),rgba(4,14,28,.08)),
+url("image/a29d7bf4-1015-4790-82d5-bdae237738d6.png");
+background-size:cover;
+background-position:center;
+background-repeat:no-repeat;
+border:1px solid rgba(255,255,255,.06);
+overflow:visible;
+box-shadow:none;
+}
+
+#gameView .team-grid::before{
+display:none;
+}
+
+#gameView .field-slot,
+#gameView .pitcher-slot{
+background:rgba(14,24,45,.85);
+padding:7px 7px;
+border-radius:12px;
+font-size:12px;
+min-height:55px;
+position:relative;
+z-index:1;
+text-align:center;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+box-shadow:0 8px 18px rgba(0,0,0,.16);
+}
+
+#gameView .field-slot{
+position:absolute;
+left:var(--x);
+top:var(--y);
+transform:translate(-50%,-50%);
+width:96px;
+}
+
+#gameView .field-slot.occupied,
+#gameView .pitcher-slot.occupied{
+background:#16315f;
+color:#fff;
+}
+
+#gameView .field-slot.empty,
+#gameView .pitcher-slot.empty{
+color:#aab6d6;
+background:rgba(14,24,45,.85);
+}
+
+#gameView .pitcher-board{
+margin-top:10px;
+padding:10px;
+border-radius:18px;
+background:linear-gradient(180deg, rgba(14,24,45,.96), rgba(10,20,38,.96));
+border:1px solid rgba(255,255,255,.06);
+}
+
+#gameView .pitcher-title{
+text-transform:none;
+letter-spacing:normal;
+}
+
+#gameView .pitcher-grid{
+grid-template-columns:repeat(3,minmax(0,1fr));
+}
+
+#gameView .draft-panel{
+position:static;
+top:auto;
+}
+
+#gameView .result{
+margin-top:14px;
+padding:0;
+text-align:center;
+font-size:28px;
+font-weight:800;
+color:var(--gold-soft);
+background:transparent;
+border:0;
+}
+
+@media(max-width:1100px){
+#gameView .layout{
+flex-direction:column;
+}
+
+#gameView .layout > div:first-child,
+#gameView .layout > div:last-child{
+order:unset;
+flex:unset;
+}
+}
+
+@media(max-width:900px){
+#gameView .player-list{
+max-height:none;
+}
+
+#gameView .team-grid{
+min-height:0;
+}
+
+#gameView .field-slot{
+width:92px;
+}
+
+#gameView .pitcher-grid{
+grid-template-columns:repeat(2,minmax(0,1fr));
+}
+}
 </style>
 </head>
 <body>
 
 <section id="homeView" class="home-shell">
+<nav class="home-topnav" aria-label="首頁導覽">
+<button type="button" onclick="showHome()">遊戲大廳</button>
+<button type="button" onclick="enterGame('minor')">遊戲模式</button>
+<button type="button" onclick="openPlayerQuery()">球員查詢</button>
+<button type="button" onclick="openStatistics()">統計數據</button>
+<button type="button" onclick="openVersusMode()">雙人遊戲</button>
+<button type="button" onclick="openOnlineDraftMode()">選秀對戰</button>
+<button type="button" onclick="openOnlineMode()">連線對戰</button>
+</nav>
 <div class="card home-hero">
-<h1>⚾ 120-0 BBO Draft</h1>
-<p>隨機抽選年度球隊，從真實中華職棒年度成績轉換的 BBO 風格球員卡中建立 16 人陣容，最後模擬 120 場球季。</p>
+<div class="home-brand-panel">
+<div class="home-event-card">
+<img class="home-logo" src="image/bbo-challenge-logo-preview.png" alt="BBO Challenge 120-0 Draft">
+<div>
+<strong>BBO Challenge</strong>
+<span>120勝挑戰 選秀大廳</span>
+</div>
+</div>
+<div class="home-quick-row">
+<button type="button" onclick="enterGame('minor')">職業二軍</button>
+<button type="button" onclick="enterGame('amateur')">業餘頻道</button>
+<button type="button" onclick="enterGame('free')">自由頻道</button>
+</div>
+<div class="home-rules-title">規則說明</div>
 <div class="home-rules">
-<div class="home-rule"><h3>組成陣容</h3><span>選擇 9 位打者與 7 位投手，每輪投打最多各選 2 位。</span></div>
-<div class="home-rule"><h3>抽選規則</h3><span>每輪隨機年度與球隊；整場可各使用一次換年份及換球隊。</span></div>
-<div class="home-rule"><h3>模擬球季</h3><span>依球員能力與守位權重換算隊伍分數及 120 場戰績。</span></div>
+<div class="home-rule"><h3>組成陣容</h3><span>選擇 9 位打者與 7 位投手，湊滿 16 人後模擬球季。</span></div>
+<div class="home-rule"><h3>抽選規則</h3><span>每輪隨機年度與球隊；可使用換年份、換球隊調整選秀池。</span></div>
+<div class="home-rule"><h3>卡色限制</h3><span>不同頻道有不同紅紫卡限制，自由頻道則不限制卡色。</span></div>
+</div>
 </div>
 <div class="home-mode-group">
+<button class="home-primary-btn" onclick="enterGame('minor')">開始遊戲<br><small>GAME START</small></button>
+<div class="home-section home-section-challenge">
 <h2>120 勝挑戰</h2>
-<p>選擇卡片限制，建立陣容並挑戰 120 場球季。</p>
+<p>選擇頻道規則，從隨機年度球隊中完成選秀。</p>
 <div class="home-actions">
 <button class="channel-btn" onclick="enterGame('minor')">職業二軍頻道<br><small>紫卡最多2位，紅紫最多10位</small></button>
 <button class="channel-btn amateur" onclick="enterGame('amateur')">業餘頻道<br><small>紫卡最多1位，紅紫最多6位</small></button>
 <button class="channel-btn free" onclick="enterGame('free')">自由頻道<br><small>紅卡、紫卡數量不限</small></button>
 </div>
 </div>
-<div class="home-tools">
+<div class="home-section home-section-versus">
 <h2>雙人遊戲</h2>
+<div class="home-versus-grid">
 <button class="versus-btn" onclick="openVersusMode()">單機對戰<br><small>兩位玩家共用裝置輪流選秀，進行三戰兩勝</small></button>
+<div class="home-online-pair">
 <button class="online-draft-btn" onclick="openOnlineDraftMode()">選秀對戰<br><small>線上同步選秀，每次操作限時 15 秒</small></button>
 <select id="onlineDraftModeSelect" class="versus-mode-select" aria-label="選秀對戰頻道">
 <option value="free">自由頻道</option>
 <option value="minor" selected>職業二軍頻道</option>
 <option value="amateur">業餘頻道</option>
 </select>
+</div>
+<div class="home-online-pair">
 <button class="online-btn" onclick="openOnlineMode()">連線對戰<br><small>先完成選秀，再尋找線上對手</small></button>
 <select id="onlineModeSelect" class="versus-mode-select" aria-label="連線對戰頻道">
 <option value="free">自由頻道</option>
 <option value="minor" selected>職業二軍頻道</option>
 <option value="amateur">業餘頻道</option>
 </select>
+</div>
+</div>
+</div>
+<div class="home-section home-section-tools">
 <h2>資料工具</h2>
+<div class="home-tools">
 <button class="tool-btn" onclick="openPlayerQuery()">球員查詢<br><small>依聯盟、年度與球隊瀏覽完整數值</small></button>
 <button class="tool-btn" onclick="openStatistics()">統計數據<br><small>查看各頻道完成挑戰後的隊伍分數統計</small></button>
 </div>
+</div>
+</div>
+</div>
+<div class="home-bottom-status">
+<span>[SYSTEM] 歡迎來到 BBO Challenge，選擇模式開始你的 120 勝挑戰。</span>
+<strong>v1.2.18</strong>
 </div>
 </section>
 
@@ -1409,9 +3209,9 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 </div>
 <div class="card">
 <div class="query-controls">
-<label>聯盟<select id="queryLeague" onchange="populateQueryYears()"><option value="CPBL">CPBL 中華職棒</option><option value="TML">TML 台灣大聯盟</option><option value="Team Taiwan">Team Taiwan</option></select></label>
 <label>年度<select id="queryYear" onchange="populateQueryTeams()"></select></label>
 <label>球隊<select id="queryTeam" onchange="setQueryPage(1)"></select></label>
+<label>守位<select id="queryPosition" onchange="setQueryPositionFilter(this.value)"></select></label>
 <div class="player-filter" aria-label="球員查詢分類">
 <button class="filter-btn active" data-query-filter="all" onclick="setQueryPlayerFilter('all')">全部選手</button>
 <button class="filter-btn" data-query-filter="hitter" onclick="setQueryPlayerFilter('hitter')">野手</button>
