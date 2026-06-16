@@ -287,6 +287,20 @@ grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
 gap:7px;
 }
 
+.query-pagination{
+display:flex;
+align-items:center;
+justify-content:center;
+gap:12px;
+margin-top:14px;
+color:var(--gold-soft);
+font-weight:800;
+}
+
+.query-pagination button{
+min-width:96px;
+}
+
 .versus-shell{
 max-width:1800px;
 margin:0 auto;
@@ -1397,7 +1411,7 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <div class="query-controls">
 <label>聯盟<select id="queryLeague" onchange="populateQueryYears()"><option value="CPBL">CPBL 中華職棒</option><option value="TML">TML 台灣大聯盟</option></select></label>
 <label>年度<select id="queryYear" onchange="populateQueryTeams()"></select></label>
-<label>球隊<select id="queryTeam" onchange="renderPlayerQuery()"></select></label>
+<label>球隊<select id="queryTeam" onchange="setQueryPage(1)"></select></label>
 <div class="player-filter" aria-label="球員查詢分類">
 <button class="filter-btn active" data-query-filter="all" onclick="setQueryPlayerFilter('all')">全部選手</button>
 <button class="filter-btn" data-query-filter="hitter" onclick="setQueryPlayerFilter('hitter')">野手</button>
@@ -1406,6 +1420,7 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 </div>
 <div id="querySummary" class="query-summary"></div>
 <div id="queryResults" class="query-results"></div>
+<div id="queryPagination" class="query-pagination"></div>
 </div>
 </section>
 
@@ -1444,7 +1459,7 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 <div>
 
 <div class="card">
-<script src="BBO_Search/bbo-data.js?v=1.2.14"></script>
+<script src="BBO_Search/bbo-data.js?v=1.2.15"></script>
 
 <div class="topbar">
 
@@ -1543,16 +1558,16 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 </div>
 
 </div>
-<footer class="app-version">BBO Challenge v1.2.14</footer>
-<script src="config.js?v=1.2.14"></script>
+<footer class="app-version">BBO Challenge v1.2.15</footer>
+<script src="config.js?v=1.2.15"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-<script src="firebase-config.js?v=1.2.14"></script>
-<script src="statistics.js?v=1.2.14"></script>
-<script src="app.js?v=1.2.14"></script>
-<script src="online-match.js?v=1.2.14"></script>
-<script src="online-draft.js?v=1.2.14"></script>
+<script src="firebase-config.js?v=1.2.15"></script>
+<script src="statistics.js?v=1.2.15"></script>
+<script src="app.js?v=1.2.15"></script>
+<script src="online-match.js?v=1.2.15"></script>
+<script src="online-draft.js?v=1.2.15"></script>
 
 </body>
 </html>
