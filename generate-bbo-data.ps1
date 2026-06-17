@@ -25,13 +25,17 @@ function Divide {
 }
 
 function Normalize-TeamName {
-    param($Value)
+    param($Value, $TeamId = $null, $Year = $null)
 
     $name = ([string]$Value).Trim()
     $baseName = ([string][char]0x7D71) + ([string][char]0x4E00)
     $sevenElevenName = $baseName + '7-ELEVEn'
     $lionsName = $baseName + ([string][char]0x7345)
     if ($name -eq $sevenElevenName -or $name -eq $lionsName) { return $baseName }
+    if ($name -eq '中信') {
+        if ($TeamId -eq 'AHH' -or ($Year -and [int]$Year -le 2008)) { return '中信鯨' }
+        if ($TeamId -eq 'ACN' -or ($Year -and [int]$Year -ge 2014)) { return '中信兄弟' }
+    }
     return $name
 }
 
@@ -378,7 +382,7 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
             source = 'cpbl-opendata-derived'
             league = 'CPBL'
             type = 'hitter'
-            team = Normalize-TeamName $row.'Team Name'
+            team = Normalize-TeamName $row.'Team Name' $row.'Team ID' $year
             year = $year
             name = $row.Name
             cardType = $cardType
@@ -435,7 +439,7 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
             source = 'cpbl-opendata-derived'
             league = 'CPBL'
             type = 'pitcher'
-            team = Normalize-TeamName $row.'Team Name'
+            team = Normalize-TeamName $row.'Team Name' $row.'Team ID' $year
             year = $year
             name = $row.Name
             cardType = $cardType

@@ -16,7 +16,9 @@ window.DraftConfig = {
     "music/THE_CHALLENGERS_320k.mp3"
   ],
   teams: [
+    "兄弟",
     "兄弟象",
+    "中信鯨",
     "統一獅",
     "興農牛",
     "LaNew熊",
