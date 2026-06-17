@@ -1607,6 +1607,49 @@ border:1px solid rgba(255,255,255,.05);
 white-space:nowrap;
 }
 
+.query-player::after{
+content:none;
+}
+
+.query-player{
+min-height:0;
+background:rgba(10,25,52,.92);
+border-radius:10px;
+border:1px solid rgba(255,255,255,.06);
+box-shadow:none;
+}
+
+.query-player .player-name{
+border-radius:2px;
+box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);
+}
+
+.query-player .stats{
+gap:initial;
+margin-top:5px;
+line-height:1.2;
+}
+
+.query-player .stats-grid{
+grid-template-columns:repeat(2,minmax(76px,1fr));
+grid-auto-rows:min-content;
+gap:1px 9px;
+padding:3px 6px;
+}
+
+.query-player .stat-item{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:8px;
+min-height:15px;
+padding:0;
+line-height:1.1;
+border-radius:0;
+background:transparent;
+border:0;
+}
+
 .badge,
 .filter-btn,
 .counter{
