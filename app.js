@@ -661,7 +661,21 @@ ${info}
     ["homeView", "gameView", "queryView", "statisticsView", "onlineDraftMatchView", "versusView"].forEach(id => {
       document.getElementById(id).hidden = id !== viewId;
     });
+    updateMobileDraftPanelPlacement();
     window.scrollTo({ top: 0, behavior: "auto" });
+  }
+
+  function updateMobileDraftPanelPlacement() {
+    const panel = document.getElementById("draftPanel");
+    const mobileSlot = document.getElementById("mobileDraftPanelSlot");
+    const desktopSlot = document.getElementById("desktopDraftPanelSlot");
+    if (!panel || !mobileSlot || !desktopSlot) return;
+
+    const shouldUseMobileFlow = isMobileDraftLayout();
+    const targetParent = shouldUseMobileFlow ? mobileSlot : desktopSlot.parentElement;
+    const referenceNode = shouldUseMobileFlow ? null : desktopSlot.nextSibling;
+    if (panel.parentElement === targetParent) return;
+    targetParent.insertBefore(panel, referenceNode);
   }
 
   function showStatisticsView() {
@@ -1920,5 +1934,6 @@ ${info}
   renderRoster();
   renderPlayers();
   updateRerollButtons();
+  window.addEventListener("resize", updateMobileDraftPanelPlacement);
   showView("homeView");
 })();

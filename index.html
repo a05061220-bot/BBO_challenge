@@ -3146,6 +3146,16 @@ grid-template-columns:repeat(2,minmax(0,1fr));
 gap:7px;
 }
 
+#gameView #mobileDraftPanelSlot{
+margin:10px 0 12px;
+}
+
+#gameView #mobileDraftPanelSlot #draftPanel{
+padding:12px;
+border-radius:16px;
+box-shadow:0 10px 24px rgba(0,0,0,.22);
+}
+
 #gameView .field-slot{
 position:relative;
 left:auto;
@@ -3260,7 +3270,7 @@ text-align:center;
 </div>
 <div class="home-bottom-status">
 <span>[SYSTEM] 歡迎來到 BBO Challenge，選擇模式開始你的 120 勝挑戰。</span>
-<strong>v1.2.21</strong>
+<strong>v1.2.22</strong>
 </div>
 </section>
 
@@ -3357,7 +3367,7 @@ text-align:center;
 <div>
 
 <div class="card">
-<script src="BBO_Search/bbo-data.js?v=1.2.21"></script>
+<script src="BBO_Search/bbo-data.js?v=1.2.22"></script>
 
 <div class="topbar">
 
@@ -3394,6 +3404,7 @@ text-align:center;
 </div>
 
 <div id="selectionInfo"></div>
+<div id="mobileDraftPanelSlot"></div>
 
 <div class="team-grid">
 <div id="fieldRoster"></div>
@@ -3429,6 +3440,7 @@ text-align:center;
 
 <div>
 
+<div id="desktopDraftPanelSlot"></div>
 <div id="draftPanel" class="card draft-panel">
 
 <div class="topbar">
@@ -3456,16 +3468,16 @@ text-align:center;
 </div>
 
 </div>
-<footer class="app-version">BBO Challenge v1.2.21</footer>
-<script src="config.js?v=1.2.21"></script>
+<footer class="app-version">BBO Challenge v1.2.22</footer>
+<script src="config.js?v=1.2.22"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-<script src="firebase-config.js?v=1.2.21"></script>
-<script src="statistics.js?v=1.2.21"></script>
-<script src="app.js?v=1.2.21"></script>
-<script src="online-match.js?v=1.2.21"></script>
-<script src="online-draft.js?v=1.2.21"></script>
+<script src="firebase-config.js?v=1.2.22"></script>
+<script src="statistics.js?v=1.2.22"></script>
+<script src="app.js?v=1.2.22"></script>
+<script src="online-match.js?v=1.2.22"></script>
+<script src="online-draft.js?v=1.2.22"></script>
 
 </body>
 </html>
