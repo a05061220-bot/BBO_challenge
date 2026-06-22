@@ -1417,6 +1417,10 @@ ${info}
   }
 
   function renderVersusMode() {
+    const modeSelect = document.getElementById("versusModeSelect");
+    if (modeSelect && modeSelect.value !== versusState.mode) {
+      modeSelect.value = versusState.mode || "free";
+    }
     renderVersusRoster(0);
     renderVersusRoster(1);
 
