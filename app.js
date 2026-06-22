@@ -1755,8 +1755,8 @@ ${info}
     `;
   }
 
-  function simulateVersusSeries() {
-    if (!versusState.finished || getVersusAdjustmentSeconds() > 0) {
+  function simulateVersusSeries(force = false) {
+    if (!versusState.finished || (!force && getVersusAdjustmentSeconds() > 0)) {
       return;
     }
 
@@ -1921,6 +1921,7 @@ ${info}
     getOnlineDraftSnapshot,
     showOnlineMatchup,
     simulateOnlineSeries: simulateVersusSeries,
+    simulateOnlineDraftSeriesNow: () => simulateVersusSeries(true),
     renderOnlineSeries,
     showStatisticsView,
     showOnlineDraftMatchView,

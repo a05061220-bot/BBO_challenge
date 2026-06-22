@@ -282,8 +282,15 @@
     if (!currentMatch || currentMatch.player1 !== playerId || currentMatch.resultHtml) return;
     const resultLock = await matchRef.child("resultLock").transaction(value => value || playerId);
     if (!resultLock.committed || resultLock.snapshot.val() !== playerId) return;
-    const resultHtml = window.BBOGame.simulateOnlineSeries();
-    await matchRef.child("resultHtml").set(resultHtml);
+    try {
+      const resultHtml = window.BBOGame.simulateOnlineDraftSeriesNow();
+      if (!resultHtml) throw new Error("對戰結果產生失敗");
+      await matchRef.child("resultHtml").set(resultHtml);
+    } catch (error) {
+      console.error("產生線上選秀對戰結果失敗", error);
+      await matchRef.child("resultLock").remove();
+      setMatchStatus(`產生結果失敗：${error.message}`);
+    }
   }
 
   function startTimer() {
