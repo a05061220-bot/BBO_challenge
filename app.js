@@ -513,6 +513,29 @@
     updateRerollButtons();
     updateRoundInfo();
     updateOnlineDraftUi();
+    scrollMobileDraftTarget(player.type === "pitcher" ? "pitcherRoster" : "fieldRoster");
+  }
+
+  function isMobileDraftLayout() {
+    return window.matchMedia("(max-width: 700px)").matches && !document.getElementById("gameView").hidden;
+  }
+
+  function scrollMobileDraftTarget(elementId) {
+    if (!isMobileDraftLayout()) return;
+    const target = document.getElementById(elementId);
+    if (!target) return;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+  }
+
+  function scrollMobileDraftPlayers() {
+    if (!isMobileDraftLayout()) return;
+    const target = document.getElementById("players");
+    if (!target || !currentPool) return;
+    window.setTimeout(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
   }
 
   function isRoundLimitReached(player) {
@@ -958,6 +981,7 @@ ${info}
     renderPlayers();
     updateRerollButtons();
     updateRoundInfo();
+    scrollMobileDraftPlayers();
 
     if (rosterCount() >= config.rosterLimits.total) {
       if (onlineDraftMode) {
@@ -1069,6 +1093,7 @@ ${info}
     renderPlayers();
     updateRerollButtons();
     updateOnlineDraftUi();
+    scrollMobileDraftPlayers();
   }
 
   function hitterScore(player, slotKey) {

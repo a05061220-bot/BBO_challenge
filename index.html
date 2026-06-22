@@ -3166,6 +3166,20 @@ overflow:hidden;
 text-overflow:ellipsis;
 white-space:nowrap;
 }
+
+#gameView #players::before{
+content:"點選球員後會自動跳到可放入守位；放入後會回到名單";
+display:block;
+grid-column:1 / -1;
+margin-bottom:8px;
+padding:8px 10px;
+border-radius:12px;
+background:rgba(245,200,76,.1);
+border:1px solid rgba(245,200,76,.2);
+color:#ffe59a;
+font-size:12px;
+text-align:center;
+}
 }
 </style>
 </head>
@@ -3246,7 +3260,7 @@ white-space:nowrap;
 </div>
 <div class="home-bottom-status">
 <span>[SYSTEM] 歡迎來到 BBO Challenge，選擇模式開始你的 120 勝挑戰。</span>
-<strong>v1.2.20</strong>
+<strong>v1.2.21</strong>
 </div>
 </section>
 
@@ -3343,7 +3357,7 @@ white-space:nowrap;
 <div>
 
 <div class="card">
-<script src="BBO_Search/bbo-data.js?v=1.2.20"></script>
+<script src="BBO_Search/bbo-data.js?v=1.2.21"></script>
 
 <div class="topbar">
 
@@ -3442,16 +3456,16 @@ white-space:nowrap;
 </div>
 
 </div>
-<footer class="app-version">BBO Challenge v1.2.20</footer>
-<script src="config.js?v=1.2.20"></script>
+<footer class="app-version">BBO Challenge v1.2.21</footer>
+<script src="config.js?v=1.2.21"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
-<script src="firebase-config.js?v=1.2.20"></script>
-<script src="statistics.js?v=1.2.20"></script>
-<script src="app.js?v=1.2.20"></script>
-<script src="online-match.js?v=1.2.20"></script>
-<script src="online-draft.js?v=1.2.20"></script>
+<script src="firebase-config.js?v=1.2.21"></script>
+<script src="statistics.js?v=1.2.21"></script>
+<script src="app.js?v=1.2.21"></script>
+<script src="online-match.js?v=1.2.21"></script>
+<script src="online-draft.js?v=1.2.21"></script>
 
 </body>
 </html>
