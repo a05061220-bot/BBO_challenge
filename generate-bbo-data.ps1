@@ -45,23 +45,23 @@ function Get-SpecialHitterOverride {
     if ([int]$Year -ne 1993 -or $Team -ne '統一') { return $null }
 
     $overrides = @{
-        '曾智偵' = @{ power = 73; contact = 84; speed = 71; arm = 83; fielding = 79 }
-        '羅敏卿' = @{ power = 70; contact = 85; speed = 78; arm = 77; fielding = 84 }
-        '卡羅' = @{ power = 74; contact = 70; speed = 84; arm = 70; fielding = 76 }
-        '余富誠' = @{ power = 85; contact = 76; speed = 79; arm = 81; fielding = 85 }
-        '呂文生' = @{ power = 73; contact = 83; speed = 86; arm = 81; fielding = 83 }
-        '江泰權' = @{ power = 63; contact = 84; speed = 81; arm = 78; fielding = 85 }
-        '吳林煉' = @{ power = 64; contact = 70; speed = 88; arm = 72; fielding = 74 }
-        '陳政賢' = @{ power = 67; contact = 82; speed = 70; arm = 75; fielding = 82 }
-        '鄧耀華' = @{ power = 74; contact = 80; speed = 63; arm = 78; fielding = 74 }
-        '賴崇光' = @{ power = 67; contact = 80; speed = 68; arm = 71; fielding = 82 }
-        '鄭百勝' = @{ power = 62; contact = 76; speed = 83; arm = 73; fielding = 80 }
-        '汪俊良' = @{ power = 66; contact = 72; speed = 83; arm = 74; fielding = 72 }
-        '林克' = @{ power = 72; contact = 77; speed = 71; arm = 71; fielding = 82 }
-        '來旺' = @{ power = 68; contact = 80; speed = 69; arm = 73; fielding = 79 }
-        '宋榮泰' = @{ power = 62; contact = 74; speed = 83; arm = 73; fielding = 73 }
-        '耿健輝' = @{ power = 70; contact = 67; speed = 68; arm = 67; fielding = 69 }
-        '李坤哲' = @{ power = 62; contact = 67; speed = 74; arm = 64; fielding = 72 }
+        '曾智偵' = @{ cardType = '紅'; power = 73; contact = 84; speed = 71; arm = 83; fielding = 79 }
+        '羅敏卿' = @{ cardType = '紅'; power = 70; contact = 85; speed = 78; arm = 77; fielding = 84 }
+        '卡羅' = @{ cardType = '黃'; power = 74; contact = 70; speed = 84; arm = 70; fielding = 76 }
+        '余富誠' = @{ cardType = '紅'; power = 85; contact = 76; speed = 79; arm = 81; fielding = 85 }
+        '呂文生' = @{ cardType = '紅'; power = 73; contact = 83; speed = 86; arm = 81; fielding = 83 }
+        '江泰權' = @{ cardType = '紅'; power = 63; contact = 84; speed = 81; arm = 78; fielding = 85 }
+        '吳林煉' = @{ cardType = '黃'; power = 64; contact = 70; speed = 88; arm = 72; fielding = 74 }
+        '陳政賢' = @{ cardType = '黃'; power = 67; contact = 82; speed = 70; arm = 75; fielding = 82 }
+        '鄧耀華' = @{ cardType = '黃'; power = 74; contact = 80; speed = 63; arm = 78; fielding = 74 }
+        '賴崇光' = @{ cardType = '黃'; power = 67; contact = 80; speed = 68; arm = 71; fielding = 82 }
+        '鄭百勝' = @{ cardType = '黃'; power = 62; contact = 76; speed = 83; arm = 73; fielding = 80 }
+        '汪俊良' = @{ cardType = '黃'; power = 66; contact = 72; speed = 83; arm = 74; fielding = 72 }
+        '林克' = @{ cardType = '黃'; power = 72; contact = 77; speed = 71; arm = 71; fielding = 82 }
+        '來旺' = @{ cardType = '黃'; power = 68; contact = 80; speed = 69; arm = 73; fielding = 79 }
+        '宋榮泰' = @{ cardType = '黃'; power = 62; contact = 74; speed = 83; arm = 73; fielding = 73 }
+        '耿健輝' = @{ cardType = '藍'; power = 70; contact = 67; speed = 68; arm = 67; fielding = 69 }
+        '李坤哲' = @{ cardType = '藍'; power = 62; contact = 67; speed = 74; arm = 64; fielding = 72 }
     }
 
     return $overrides[$Name]
@@ -408,6 +408,7 @@ for ($year = $MinYear; $year -le $MaxYear; $year++) {
         $teamName = Normalize-TeamName $row.'Team Name' $row.'Team ID' $year
         $specialOverride = Get-SpecialHitterOverride $year $teamName $row.Name
         if ($specialOverride) {
+            $cardType = $specialOverride.cardType
             $adjusted.power = $specialOverride.power
             $adjusted.contact = $specialOverride.contact
             $defenseAdjusted.fielding = $specialOverride.fielding
