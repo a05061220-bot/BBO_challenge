@@ -388,7 +388,8 @@
       picker: 0,
       picksInPool: 0,
       finished: false,
-      lineupDeadline: null
+      lineupDeadline: null,
+      lineupReady: [false, false]
     };
   }
 
@@ -1384,17 +1385,19 @@ ${info}
     document.getElementById("versusTeam2").classList.toggle("active", !versusState.finished && versusState.picker === 1);
     const adjustmentSeconds = getVersusAdjustmentSeconds();
     const adjustingLineup = adjustmentSeconds > 0;
+    const readySuffix = onlineVersusMode && versusState.finished ? `｜準備 ${versusLineupReadyCount()}/2` : "";
     const status = document.getElementById("versusStatus");
     status.classList.toggle("lineup-adjustment-active", adjustingLineup);
     status.textContent = versusState.finished
       ? adjustingLineup
-        ? `請調整棒次｜剩餘 ${formatVersusCountdown(adjustmentSeconds)}`
-        : "棒次調整時間結束，準備進行三戰兩勝"
+        ? `請調整棒次｜剩餘 ${formatVersusCountdown(adjustmentSeconds)}${readySuffix}`
+        : `棒次調整時間結束，準備進行三戰兩勝${readySuffix}`
       : `目前由${versusPlayerLabel(versusState.picker)}${versusState.currentPool ? "選擇一位球員" : "按下 SPIN"}`;
 
     const spinButton = document.getElementById("versusSpinButton");
     spinButton.disabled = versusState.finished || Boolean(versusState.currentPool);
     spinButton.textContent = `🎲 ${versusPlayerLabel(versusState.spinner)} SPIN`;
+    updateVersusReadyButton(adjustingLineup);
     document.getElementById("versusSimulateButton").disabled = !versusState.finished || adjustingLineup;
     document.getElementById("versusModeSelect").disabled = Boolean(versusState.currentPool) || versusAllPlayers().length > 0;
 
@@ -1417,6 +1420,20 @@ ${info}
     return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
   }
 
+  function versusLineupReadyCount() {
+    return (versusState.lineupReady || []).filter(Boolean).length;
+  }
+
+  function updateVersusReadyButton(adjustingLineup) {
+    const button = document.getElementById("versusReadyButton");
+    if (!button) return;
+    button.hidden = !(onlineVersusMode && versusState.finished && adjustingLineup);
+    if (button.hidden) return;
+    const localReady = Boolean(window.BBOOnlineDraft?.getLineupReadyInfo?.().localReady);
+    button.disabled = localReady;
+    button.textContent = localReady ? "已準備完成" : "準備完成";
+  }
+
   function startVersusAdjustmentTimer() {
     clearInterval(versusAdjustmentTimer);
     if (!versusState.finished || !versusState.lineupDeadline) return;
@@ -1436,6 +1453,7 @@ ${info}
     document.querySelector("#versusView .view-nav h1").textContent = "單機對戰";
     resetVersusMode();
     document.getElementById("versusSpinButton").hidden = false;
+    document.getElementById("versusReadyButton").hidden = true;
     document.getElementById("versusSimulateButton").hidden = false;
     document.getElementById("versusResetButton").hidden = false;
     startBackgroundMusic();
@@ -1508,6 +1526,7 @@ ${info}
       versusState.finished = true;
       versusState.currentPool = null;
       versusState.lineupDeadline = Date.now() + 60000;
+      versusState.lineupReady = [false, false];
     } else if (versusState.picksInPool === 1) {
       versusState.picker = 1 - versusState.spinner;
       grantVersusFreeSpinIfPoolBlocked();
@@ -1527,6 +1546,7 @@ ${info}
     versusState = hydrateOnlineVersusState(state);
     document.querySelector("#versusView .view-nav h1").textContent = "線上選秀對戰";
     document.getElementById("versusSpinButton").hidden = false;
+    document.getElementById("versusReadyButton").hidden = true;
     document.getElementById("versusSimulateButton").hidden = true;
     document.getElementById("versusResetButton").hidden = true;
     document.getElementById("versusModeSelect").disabled = true;
@@ -1565,6 +1585,7 @@ ${info}
         lineup: savedTeam.lineup || emptyTeam.lineup
       };
     });
+    hydrated.lineupReady = [0, 1].map(index => Boolean(hydrated.lineupReady?.[index]));
     return hydrated;
   }
 
@@ -1610,6 +1631,11 @@ ${info}
   function canAdjustVersusLineup(teamIndex) {
     if (!versusState.finished || getVersusAdjustmentSeconds() <= 0) return false;
     return !onlineVersusMode || window.BBOOnlineDraft?.canEditLineup(teamIndex);
+  }
+
+  function markOnlineDraftLineupReady() {
+    if (!onlineVersusMode || !versusState.finished || getVersusAdjustmentSeconds() <= 0) return;
+    window.BBOOnlineDraft?.markLineupReady?.();
   }
 
   function setVersusMode(mode) {
@@ -1798,6 +1824,7 @@ ${info}
     document.querySelector("#versusTeam2 h2").textContent = versusPlayerLabel(1);
     renderVersusMode();
     document.getElementById("versusSpinButton").hidden = true;
+    document.getElementById("versusReadyButton").hidden = true;
     document.getElementById("versusSimulateButton").hidden = true;
     document.getElementById("versusResetButton").hidden = true;
     document.getElementById("versusModeSelect").disabled = true;
@@ -1847,6 +1874,7 @@ ${info}
   window.startVersusLineupDrag = startVersusLineupDrag;
   window.allowVersusLineupDrop = allowVersusLineupDrop;
   window.dropVersusLineup = dropVersusLineup;
+  window.markOnlineDraftLineupReady = markOnlineDraftLineupReady;
   window.simulateVersusSeries = simulateVersusSeries;
   window.setVersusMode = setVersusMode;
   window.BBOGame = {

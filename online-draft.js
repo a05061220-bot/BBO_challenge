@@ -54,7 +54,22 @@
 
   function canEditLineup(teamIndex) {
     const state = currentMatch?.state;
-    return Boolean(state?.finished && state.lineupDeadline > Date.now() && teamIndex === localTeamIndex());
+    return Boolean(
+      state?.finished &&
+      state.lineupDeadline > Date.now() &&
+      teamIndex === localTeamIndex() &&
+      !state.lineupReady?.[teamIndex]
+    );
+  }
+
+  function getLineupReadyInfo() {
+    const ready = currentMatch?.state?.lineupReady || [false, false];
+    const localIndex = localTeamIndex();
+    return {
+      ready,
+      count: ready.filter(Boolean).length,
+      localReady: Boolean(ready[localIndex])
+    };
   }
 
   async function open() {
@@ -247,6 +262,30 @@
     });
   }
 
+  async function markLineupReady() {
+    if (!matchRef || !currentMatch?.state?.finished) return;
+    const teamIndex = localTeamIndex();
+    if (teamIndex < 0 || currentMatch.state.lineupDeadline <= Date.now()) return;
+    if (currentMatch.state.lineupReady?.[teamIndex]) return;
+    await matchRef.transaction(match => {
+      if (!match?.state?.finished || match.resultHtml) return match;
+      if (match.state.lineupDeadline <= Date.now()) return match;
+      const ready = [0, 1].map(index => Boolean(match.state.lineupReady?.[index]));
+      ready[teamIndex] = true;
+      match.state.lineupReady = ready;
+      match.revision = Number(match.revision || 0) + 1;
+      return match;
+    });
+  }
+
+  async function createResultIfNeeded() {
+    if (!currentMatch || currentMatch.player1 !== playerId || currentMatch.resultHtml) return;
+    const resultLock = await matchRef.child("resultLock").transaction(value => value || playerId);
+    if (!resultLock.committed || resultLock.snapshot.val() !== playerId) return;
+    const resultHtml = window.BBOGame.simulateOnlineSeries();
+    await matchRef.child("resultHtml").set(resultHtml);
+  }
+
   function startTimer() {
     clearInterval(timer);
     timer = setInterval(async () => {
@@ -258,18 +297,22 @@
           status.textContent = "線上選秀對戰完成";
           return clearInterval(timer);
         }
+        const ready = currentMatch.state.lineupReady || [false, false];
+        const readyCount = ready.filter(Boolean).length;
+        const bothReady = readyCount >= 2;
         const seconds = Math.max(0, Math.ceil((currentMatch.state.lineupDeadline - Date.now()) / 1000));
-        status.classList.toggle("lineup-adjustment-active", seconds > 0);
-        status.textContent = seconds > 0
-          ? `請調整你的棒次｜剩餘 ${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`
-          : "棒次調整時間結束，正在產生對戰結果...";
-        if (seconds > 0) return;
+        status.classList.toggle("lineup-adjustment-active", seconds > 0 && !bothReady);
+        if (seconds > 0 && !bothReady) {
+          status.textContent =
+            `請調整你的棒次｜剩餘 ${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}｜準備 ${readyCount}/2`;
+        } else if (bothReady) {
+          status.textContent = "雙方已準備完成，正在產生對戰結果...";
+        } else {
+          status.textContent = "棒次調整時間結束，正在產生對戰結果...";
+        }
+        if (seconds > 0 && !bothReady) return;
         clearInterval(timer);
-        if (currentMatch.player1 !== playerId || currentMatch.resultHtml) return;
-        const resultLock = await matchRef.child("resultLock").transaction(value => value || playerId);
-        if (!resultLock.committed || resultLock.snapshot.val() !== playerId) return;
-        const resultHtml = window.BBOGame.simulateOnlineSeries();
-        await matchRef.child("resultHtml").set(resultHtml);
+        await createResultIfNeeded();
         return;
       }
       const seconds = Math.max(0, Math.ceil((currentMatch.deadline - Date.now()) / 1000));
@@ -320,5 +363,5 @@
   window.openOnlineDraftMode = open;
   window.searchAgainOnlineDraft = searchAgain;
   window.cancelOnlineDraftMatch = cancel;
-  window.BBOOnlineDraft = { canAct, canEditLineup, stateChanged, leave };
+  window.BBOOnlineDraft = { canAct, canEditLineup, getLineupReadyInfo, markLineupReady, stateChanged, leave };
 })();
