@@ -337,6 +337,7 @@
   const queryPageSize = 60;
   let currentPool = null;
   let selectedPlayerId = null;
+  let movingRosterSlot = null;
   let draftStarted = false;
   let playerPickedThisRound = false;
   let yearRerollUsed = false;
@@ -384,6 +385,7 @@
       currentPool: null,
       pendingPlayerId: null,
       draggedLineup: null,
+      movingRosterSlot: null,
       spinner: 0,
       picker: 0,
       picksInPool: 0,
@@ -507,6 +509,7 @@
       return;
     }
 
+    movingRosterSlot = null;
     selectedPlayerId = playerId;
     renderRoster();
     renderPlayers();
@@ -580,14 +583,96 @@
     return getAvailableRosterSlotsForPlayer(player).length === 0;
   }
 
+  function rosterSlotType(slotKey) {
+    return config.pitcherSlots.includes(slotKey) ? "pitcher" : "hitter";
+  }
+
+  function getRosterSlotPlayer(slotKey) {
+    return rosterSlotType(slotKey) === "hitter" ? roster.hitters[slotKey] : roster.pitchers[slotKey];
+  }
+
+  function setRosterSlotPlayer(slotKey, player) {
+    if (rosterSlotType(slotKey) === "hitter") {
+      if (player) roster.hitters[slotKey] = player;
+      else delete roster.hitters[slotKey];
+    } else {
+      roster.pitchers[slotKey] = player || null;
+    }
+  }
+
+  function canMoveRosterPlayerTo(sourceSlot, targetSlot) {
+    if (!movingRosterSlot || sourceSlot === targetSlot || rosterSlotType(sourceSlot) !== rosterSlotType(targetSlot)) {
+      return false;
+    }
+    const sourcePlayer = getRosterSlotPlayer(sourceSlot);
+    const targetPlayer = getRosterSlotPlayer(targetSlot);
+    return Boolean(
+      sourcePlayer &&
+      canPlayerUseSlot(sourcePlayer, targetSlot) &&
+      (!targetPlayer || canPlayerUseSlot(targetPlayer, sourceSlot))
+    );
+  }
+
+  function moveRosterPlayer(sourceSlot, targetSlot) {
+    if (!canMoveRosterPlayerTo(sourceSlot, targetSlot)) return false;
+    const sourcePlayer = getRosterSlotPlayer(sourceSlot);
+    const targetPlayer = getRosterSlotPlayer(targetSlot);
+    setRosterSlotPlayer(targetSlot, sourcePlayer);
+    setRosterSlotPlayer(sourceSlot, targetPlayer);
+    movingRosterSlot = null;
+    renderRoster();
+    renderPlayers();
+    return true;
+  }
+
+  function handleRosterSlotClick(slotKey) {
+    const player = getRosterSlotPlayer(slotKey);
+    if (movingRosterSlot) {
+      if (movingRosterSlot.slotKey === slotKey) {
+        movingRosterSlot = null;
+        renderRoster();
+        return;
+      }
+      if (moveRosterPlayer(movingRosterSlot.slotKey, slotKey)) return;
+    }
+
+    if (getSelectedPlayer()) {
+      addSelectedToSlot(slotKey);
+      return;
+    }
+
+    if (!player) {
+      alert("請先選擇一位球員");
+      return;
+    }
+
+    const movable = (rosterSlotType(slotKey) === "hitter" ? config.fieldSlots.map(slot => slot.key) : config.pitcherSlots)
+      .some(targetSlot => {
+        const targetPlayer = getRosterSlotPlayer(targetSlot);
+        return targetSlot !== slotKey &&
+          canPlayerUseSlot(player, targetSlot) &&
+          (!targetPlayer || canPlayerUseSlot(targetPlayer, slotKey));
+      });
+    if (!movable) {
+      alert("這位球員沒有其他可移動守位");
+      return;
+    }
+    movingRosterSlot = { slotKey };
+    selectedPlayerId = null;
+    renderRoster();
+    renderPlayers();
+  }
+
   function renderRoster() {
     const selectedPlayer = getSelectedPlayer();
     const fieldHtml = config.fieldSlots.map(slot => {
       const player = roster.hitters[slot.key];
-      const eligible = !player && selectedPlayer && canPlayerUseSlot(selectedPlayer, slot.key);
+      const movingSource = movingRosterSlot?.slotKey === slot.key;
+      const moveEligible = movingRosterSlot && canMoveRosterPlayerTo(movingRosterSlot.slotKey, slot.key);
+      const eligible = (!player && selectedPlayer && canPlayerUseSlot(selectedPlayer, slot.key)) || moveEligible;
 
       return `
-<div class="field-slot clickable ${player ? "occupied" : "empty"} ${eligible ? "eligible" : ""}" style="--x:${slot.x};--y:${slot.y};" onclick="addSelectedToSlot('${slot.key}')">
+<div class="field-slot clickable ${player ? "occupied" : "empty"} ${eligible ? "eligible" : ""} ${movingSource ? "moving-source" : ""}" style="--x:${slot.x};--y:${slot.y};" onclick="handleRosterSlotClick('${slot.key}')">
 <b>${slot.label}</b><br>
 ${renderRosterPlayer(player)}
 </div>
@@ -596,10 +681,12 @@ ${renderRosterPlayer(player)}
 
     const pitcherHtml = config.pitcherSlots.map(slot => {
       const player = roster.pitchers[slot];
-      const eligible = !player && selectedPlayer && canPlayerUseSlot(selectedPlayer, slot);
+      const movingSource = movingRosterSlot?.slotKey === slot;
+      const moveEligible = movingRosterSlot && canMoveRosterPlayerTo(movingRosterSlot.slotKey, slot);
+      const eligible = (!player && selectedPlayer && canPlayerUseSlot(selectedPlayer, slot)) || moveEligible;
 
       return `
-<div class="pitcher-slot clickable ${player ? "occupied" : "empty"} ${eligible ? "eligible" : ""}" onclick="addSelectedToSlot('${slot}')">
+<div class="pitcher-slot clickable ${player ? "occupied" : "empty"} ${eligible ? "eligible" : ""} ${movingSource ? "moving-source" : ""}" onclick="handleRosterSlotClick('${slot}')">
 <b>${slot}</b><br>
 ${renderRosterPlayer(player)}
 </div>
@@ -990,6 +1077,7 @@ ${info}
       roundPicks.pitchers++;
     }
     playerPickedThisRound = true;
+    movingRosterSlot = null;
     clearSelection();
     renderRoster();
     renderPlayers();
@@ -1078,6 +1166,7 @@ ${info}
   function remakeDraft() {
     currentPool = null;
     selectedPlayerId = null;
+    movingRosterSlot = null;
     draftStarted = false;
     playerPickedThisRound = false;
     yearRerollUsed = false;
@@ -1271,6 +1360,92 @@ ${info}
     return positionSlots;
   }
 
+  function getVersusSlotType(slot) {
+    return versusPitcherSlots.includes(slot) ? "pitcher" : "hitter";
+  }
+
+  function getVersusSlotPlayer(team, slot) {
+    return getVersusSlotType(slot) === "hitter" ? team.hitters[slot] : team.pitchers[slot];
+  }
+
+  function setVersusSlotPlayer(team, slot, player) {
+    if (getVersusSlotType(slot) === "hitter") {
+      team.hitters[slot] = player || null;
+    } else {
+      team.pitchers[slot] = player || null;
+    }
+  }
+
+  function canMoveVersusRosterSlot(teamIndex) {
+    if (versusState.finished) return false;
+    const actor = versusState.currentPool ? versusState.picker : versusState.spinner;
+    if (teamIndex !== actor) return false;
+    return !onlineVersusMode || window.BBOOnlineDraft?.canAct();
+  }
+
+  function canMoveVersusPlayerTo(teamIndex, sourceSlot, targetSlot) {
+    const moving = versusState.movingRosterSlot;
+    if (!moving || moving.teamIndex !== teamIndex || sourceSlot === targetSlot || getVersusSlotType(sourceSlot) !== getVersusSlotType(targetSlot)) {
+      return false;
+    }
+    const team = versusState.teams[teamIndex];
+    const sourcePlayer = getVersusSlotPlayer(team, sourceSlot);
+    const targetPlayer = getVersusSlotPlayer(team, targetSlot);
+    return Boolean(
+      sourcePlayer &&
+      canPlayerUseSlot(sourcePlayer, targetSlot) &&
+      (!targetPlayer || canPlayerUseSlot(targetPlayer, sourceSlot))
+    );
+  }
+
+  function moveVersusRosterPlayer(teamIndex, sourceSlot, targetSlot) {
+    if (!canMoveVersusPlayerTo(teamIndex, sourceSlot, targetSlot)) return false;
+    const team = versusState.teams[teamIndex];
+    const sourcePlayer = getVersusSlotPlayer(team, sourceSlot);
+    const targetPlayer = getVersusSlotPlayer(team, targetSlot);
+    setVersusSlotPlayer(team, targetSlot, sourcePlayer);
+    setVersusSlotPlayer(team, sourceSlot, targetPlayer);
+    versusState.movingRosterSlot = null;
+    renderVersusMode();
+    if (onlineVersusMode) window.BBOOnlineDraft?.stateChanged(versusState);
+    return true;
+  }
+
+  function handleVersusRosterSlotClick(teamIndex, slot) {
+    const team = versusState.teams[teamIndex];
+    const player = getVersusSlotPlayer(team, slot);
+    const moving = versusState.movingRosterSlot;
+    if (moving) {
+      if (moving.teamIndex === teamIndex && moving.slot === slot) {
+        versusState.movingRosterSlot = null;
+        renderVersusMode();
+        return;
+      }
+      if (moveVersusRosterPlayer(moving.teamIndex, moving.slot, slot)) return;
+    }
+
+    if (versusState.pendingPlayerId) {
+      const pendingPlayer = versusState.currentPool?.players.find(candidate => candidate.id === versusState.pendingPlayerId);
+      if (pendingPlayer && getVersusSlots(team, pendingPlayer).includes(slot)) {
+        placeVersusPlayer(slot);
+        return;
+      }
+    }
+
+    if (!player || !canMoveVersusRosterSlot(teamIndex)) return;
+    const targetSlots = getVersusSlotType(slot) === "hitter" ? versusHitterSlots : versusPitcherSlots;
+    const movable = targetSlots.some(targetSlot => {
+      const targetPlayer = getVersusSlotPlayer(team, targetSlot);
+      return targetSlot !== slot &&
+        canPlayerUseSlot(player, targetSlot) &&
+        (!targetPlayer || canPlayerUseSlot(targetPlayer, slot));
+    });
+    if (!movable) return;
+    versusState.pendingPlayerId = null;
+    versusState.movingRosterSlot = { teamIndex, slot };
+    renderVersusMode();
+  }
+
   function isVersusPlayerAvailable(player, teamIndex = versusState.picker) {
     const team = versusState.teams[teamIndex];
     return !versusState.finished &&
@@ -1374,16 +1549,18 @@ ${info}
     const pitcherAverages = versusAverageStats(pitcherPlayers, ["stamina", "control", "velocity", "breaking"]);
     const hitterRows = team.lineup.map((slot, orderIndex) => {
       const player = team.hitters[slot];
+      const movingSource = versusState.movingRosterSlot?.teamIndex === teamIndex && versusState.movingRosterSlot?.slot === slot;
+      const moveEligible = versusState.movingRosterSlot && canMoveVersusPlayerTo(teamIndex, versusState.movingRosterSlot.slot, slot);
       const canPlace = availableSlots.includes(slot);
       return `
-        <div class="versus-roster-row ${player ? "lineup-draggable" : ""} ${canPlace ? "placeable" : ""}"
+        <div class="versus-roster-row ${player ? "lineup-draggable" : ""} ${canPlace || moveEligible ? "placeable" : ""} ${movingSource ? "moving-source" : ""}"
           draggable="${Boolean(player)}"
           ondragstart="startVersusLineupDrag(${teamIndex},${orderIndex})"
           ondragover="allowVersusLineupDrop(event)"
           ondrop="dropVersusLineup(${teamIndex},${orderIndex})"
-          onclick="${canPlace ? `placeVersusPlayer('${slot}')` : ""}">
+          onclick="handleVersusRosterSlotClick(${teamIndex},'${slot}')">
           <span class="slot">${orderIndex + 1}. ${slotGroup(slot)}</span>
-          <span class="versus-roster-player ${player ? `ability-name-bar ${cardTypeClass(player.cardType)}` : ""}" ${player ? `style="${scoreBarStyle(hitterScore(player, slot))}"` : ""}>${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace ? "可放入" : "尚未選擇"}</span>
+          <span class="versus-roster-player ${player ? `ability-name-bar ${cardTypeClass(player.cardType)}` : ""}" ${player ? `style="${scoreBarStyle(hitterScore(player, slot))}"` : ""}>${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace || moveEligible ? "可放入" : "尚未選擇"}</span>
           ${player ? `<div class="versus-roster-tooltip">${renderPlayerStats(player, "stats stats-grid")}</div>` : ""}
           <span class="drag-handle">${player ? "⋮⋮" : ""}</span>
         </div>
@@ -1392,11 +1569,13 @@ ${info}
 
     const pitcherRows = versusPitcherSlots.map(slot => {
       const player = team.pitchers[slot];
+      const movingSource = versusState.movingRosterSlot?.teamIndex === teamIndex && versusState.movingRosterSlot?.slot === slot;
+      const moveEligible = versusState.movingRosterSlot && canMoveVersusPlayerTo(teamIndex, versusState.movingRosterSlot.slot, slot);
       const canPlace = availableSlots.includes(slot);
       return `
-        <div class="versus-roster-row ${canPlace ? "placeable" : ""}" onclick="${canPlace ? `placeVersusPlayer('${slot}')` : ""}">
+        <div class="versus-roster-row ${canPlace || moveEligible ? "placeable" : ""} ${movingSource ? "moving-source" : ""}" onclick="handleVersusRosterSlotClick(${teamIndex},'${slot}')">
           <span class="slot">${slot}</span>
-          <span class="versus-roster-player ${player ? `ability-name-bar ${cardTypeClass(player.cardType)}` : ""}" ${player ? `style="${scoreBarStyle(pitcherScore(player))}"` : ""}>${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace ? "可放入" : "尚未選擇"}</span>
+          <span class="versus-roster-player ${player ? `ability-name-bar ${cardTypeClass(player.cardType)}` : ""}" ${player ? `style="${scoreBarStyle(pitcherScore(player))}"` : ""}>${player ? `${formatShortYear(player.year)} ${player.name}` : canPlace || moveEligible ? "可放入" : "尚未選擇"}</span>
           ${player ? `<div class="versus-roster-tooltip">${renderPlayerStats(player, "stats stats-grid")}</div>` : ""}
           <span></span>
         </div>
@@ -1522,6 +1701,7 @@ ${info}
       return;
     }
     startBackgroundMusic();
+    versusState.movingRosterSlot = null;
     const suitablePools = getVersusSuitablePools(versusState.spinner);
     if (!suitablePools.length) {
       alert("目前找不到符合空缺守位的球員，請重新對戰。");
@@ -1544,6 +1724,7 @@ ${info}
       return;
     }
 
+    versusState.movingRosterSlot = null;
     versusState.pendingPlayerId = versusState.pendingPlayerId === playerId ? null : playerId;
     renderVersusMode();
   }
@@ -1557,6 +1738,7 @@ ${info}
       return;
     }
     const team = versusState.teams[versusState.picker];
+    versusState.movingRosterSlot = null;
     if (player.type === "hitter") {
       team.hitters[slot] = player;
     } else {
@@ -1578,6 +1760,7 @@ ${info}
       versusState.picker = versusState.spinner;
       versusState.currentPool = null;
       versusState.pendingPlayerId = null;
+      versusState.movingRosterSlot = null;
       versusState.picksInPool = 0;
     }
     renderVersusMode();
@@ -1628,6 +1811,7 @@ ${info}
         lineup: savedTeam.lineup || emptyTeam.lineup
       };
     });
+    hydrated.movingRosterSlot = hydrated.movingRosterSlot || null;
     hydrated.lineupReady = [0, 1].map(index => Boolean(hydrated.lineupReady?.[index]));
     return hydrated;
   }
@@ -1892,6 +2076,7 @@ ${info}
 
   window.selectPlayer = selectPlayer;
   window.addSelectedToSlot = addSelectedToSlot;
+  window.handleRosterSlotClick = handleRosterSlotClick;
   window.spinTeam = spinTeam;
   window.rerollYear = rerollYear;
   window.rerollTeam = rerollTeam;
@@ -1914,6 +2099,7 @@ ${info}
   window.versusSpin = versusSpin;
   window.versusPickPlayer = versusPickPlayer;
   window.placeVersusPlayer = placeVersusPlayer;
+  window.handleVersusRosterSlotClick = handleVersusRosterSlotClick;
   window.startVersusLineupDrag = startVersusLineupDrag;
   window.allowVersusLineupDrop = allowVersusLineupDrop;
   window.dropVersusLineup = dropVersusLineup;
