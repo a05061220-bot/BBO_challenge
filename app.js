@@ -6,9 +6,11 @@
   }
 
   const backgroundMusic = new Audio();
+  backgroundMusic.preload = "none";
   backgroundMusic.volume = 0.35;
   let musicQueue = [];
   let musicStarted = false;
+  let musicEnabled = localStorage.getItem("bbo-music-enabled") === "true";
 
   function shuffle(items) {
     const result = [...items];
@@ -20,7 +22,7 @@
   }
 
   function playNextMusicTrack() {
-    if (!config.musicTracks?.length) {
+    if (!musicEnabled || !config.musicTracks?.length) {
       return;
     }
 
@@ -35,6 +37,10 @@
   }
 
   function startBackgroundMusic() {
+    if (!musicEnabled) {
+      return;
+    }
+
     if (musicStarted) {
       return;
     }
@@ -43,15 +49,38 @@
     playNextMusicTrack();
   }
 
-  function toggleMusicMute() {
-    backgroundMusic.muted = !backgroundMusic.muted;
+  function updateMusicButtons() {
     document.querySelectorAll("#muteMusicButton, [data-music-mute]").forEach(button => {
-      button.textContent = backgroundMusic.muted ? "🔇" : "🔊";
-      button.title = backgroundMusic.muted ? "取消靜音" : "靜音";
+      button.textContent = musicEnabled ? "🔊" : "🔇";
+      button.title = musicEnabled ? "關閉音樂" : "開啟音樂";
+      button.setAttribute("aria-label", musicEnabled ? "關閉音樂" : "開啟音樂");
     });
   }
 
+  function stopBackgroundMusic() {
+    backgroundMusic.pause();
+    backgroundMusic.removeAttribute("src");
+    backgroundMusic.load();
+    musicStarted = false;
+  }
+
+  function toggleMusicMute() {
+    musicEnabled = !musicEnabled;
+    localStorage.setItem("bbo-music-enabled", String(musicEnabled));
+    updateMusicButtons();
+    if (musicEnabled) {
+      startBackgroundMusic();
+    } else {
+      stopBackgroundMusic();
+    }
+  }
+
   function skipMusicTrack() {
+    if (!musicEnabled) {
+      musicEnabled = true;
+      localStorage.setItem("bbo-music-enabled", "true");
+      updateMusicButtons();
+    }
     musicStarted = true;
     playNextMusicTrack();
   }
@@ -2125,6 +2154,7 @@ ${info}
   renderRoster();
   renderPlayers();
   updateRerollButtons();
+  updateMusicButtons();
   window.addEventListener("resize", updateMobileDraftPanelPlacement);
   showView("homeView");
 })();
