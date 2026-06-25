@@ -19,4 +19,4 @@ jobs:
         run: |
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-service-account.json"
-          npx -y firebase-tools@latest hosting:channel:deploy "$GITHUB_HEAD_REF" --project bbo-challenge-88640 --non-interactive
+          npx -y firebase-tools@13.35.1 hosting:channel:deploy "$GITHUB_HEAD_REF" --project bbo-challenge-88640 --non-interactive
