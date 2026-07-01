@@ -217,13 +217,95 @@
     return Math.max(60, Number(value) || 0);
   }
 
+  const hitterAbilityCaps = {
+    "紫": { power: 92, contact: 94, speed: 95, fielding: 92, arm: 92 },
+    "紅": { power: 86, contact: 86, speed: 90, fielding: 85, arm: 85 },
+    "黃": { power: 84, contact: 83, speed: 86, fielding: 80, arm: 80 },
+    "藍": { power: 80, contact: 80, speed: 80, fielding: 75, arm: 75 }
+  };
+
+  const pitcherAbilityCaps = {
+    "紫": { stamina: 97, control: 96, velocity: 93, breaking: 93 },
+    "紅": { stamina: 88, control: 93, velocity: 86, breaking: 86 },
+    "黃": { stamina: 84, control: 86, velocity: 82, breaking: 80 },
+    "藍": { stamina: 80, control: 80, velocity: 78, breaking: 75 }
+  };
+
+  function cappedAbility(value, cap) {
+    return Math.min(cap, normalizeAbility(value));
+  }
+
+  function hitterAbilityCap(cardType, ability) {
+    return (hitterAbilityCaps[cardType] || hitterAbilityCaps["藍"])[ability];
+  }
+
+  function pitcherAbilityCap(cardType, role, ability) {
+    const caps = { ...(pitcherAbilityCaps[cardType] || pitcherAbilityCaps["藍"]) };
+
+    if (role !== "SP") {
+      caps.stamina = Math.min(caps.stamina, 70);
+      caps.velocity += 2;
+      caps.breaking += 2;
+    }
+
+    return caps[ability];
+  }
+
+  function applyTmlHitterAdjustments(player) {
+    if (player.league !== "TML") {
+      return player;
+    }
+
+    const adjusted = {
+      ...player,
+      power: cappedAbility(player.power + 2, hitterAbilityCap(player.cardType, "power")),
+      contact: cappedAbility(player.contact + 2, hitterAbilityCap(player.cardType, "contact")),
+      speed: cappedAbility(player.speed + 4, hitterAbilityCap(player.cardType, "speed"))
+    };
+
+    if (adjusted.cardType === "紫" && adjusted.power < 84 && adjusted.contact < 84) {
+      if (adjusted.power >= adjusted.contact) {
+        adjusted.power = 84;
+      } else {
+        adjusted.contact = 84;
+      }
+    }
+
+    if (adjusted.id === "tml-1999-1134582436-h") {
+      return {
+        ...adjusted,
+        power: 85,
+        contact: 77,
+        speed: 75,
+        fielding: 88,
+        arm: 89
+      };
+    }
+
+    return adjusted;
+  }
+
+  function applyTmlPitcherAdjustments(player) {
+    if (player.league !== "TML") {
+      return player;
+    }
+
+    return {
+      ...player,
+      stamina: cappedAbility(player.stamina + 1, pitcherAbilityCap(player.cardType, player.role, "stamina")),
+      control: cappedAbility(player.control + 1, pitcherAbilityCap(player.cardType, player.role, "control")),
+      velocity: cappedAbility(player.velocity + 1, pitcherAbilityCap(player.cardType, player.role, "velocity")),
+      breaking: cappedAbility(player.breaking + 1, pitcherAbilityCap(player.cardType, player.role, "breaking"))
+    };
+  }
+
   function normalizeImportedPlayer(raw, index) {
     if (!raw || !raw.type) {
       return null;
     }
 
     if (raw.type === "hitter") {
-      return {
+      return applyTmlHitterAdjustments({
         id: raw.id || `import-h-${index}`,
         league: raw.league || "CPBL",
         type: "hitter",
@@ -240,10 +322,10 @@
         hittingHand: raw.hittingHand || "",
         levelUp: raw.levelUp || "",
         potentials: Array.isArray(raw.potentials) ? raw.potentials : []
-      };
+      });
     }
 
-    return {
+    return applyTmlPitcherAdjustments({
       id: raw.id || `import-p-${index}`,
       league: raw.league || "CPBL",
       type: "pitcher",
@@ -260,7 +342,7 @@
       throwType: raw.throwType || "",
       levelUp: raw.levelUp || "",
       potentials: Array.isArray(raw.potentials) ? raw.potentials : []
-    };
+    });
   }
 
   function buildDraftPoolsFromImported(players) {
