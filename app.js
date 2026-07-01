@@ -271,6 +271,16 @@
       }
     }
 
+    if (adjusted.id === "tml-1997-682761676-h") {
+      adjusted.contact = normalizeAbility(adjusted.contact - 3);
+      adjusted.speed = normalizeAbility(adjusted.speed - 2);
+    }
+
+    if (adjusted.id === "tml-1999-422562901-h") {
+      adjusted.contact = normalizeAbility(adjusted.contact - 1);
+      adjusted.speed = normalizeAbility(adjusted.speed - 3);
+    }
+
     if (adjusted.id === "tml-1999-1134582436-h") {
       return {
         ...adjusted,
