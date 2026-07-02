@@ -45,12 +45,12 @@ window.DraftConfig = {
   ],
   fieldSlots: [
     { key: "CF", label: "中外野", x: "50%", y: "27%" },
-    { key: "LF", label: "左外野", x: "29%", y: "36%" },
-    { key: "RF", label: "右外野", x: "71%", y: "36%" },
-    { key: "SS", label: "游擊", x: "40%", y: "50%" },
-    { key: "2B", label: "二壘", x: "60%", y: "50%" },
-    { key: "3B", label: "三壘", x: "31%", y: "64%" },
-    { key: "1B", label: "一壘", x: "69%", y: "64%" },
+    { key: "LF", label: "左外野", x: "29%", y: "32%" },
+    { key: "RF", label: "右外野", x: "71%", y: "32%" },
+    { key: "SS", label: "游擊", x: "40%", y: "48%" },
+    { key: "2B", label: "二壘", x: "60%", y: "48%" },
+    { key: "3B", label: "三壘", x: "31%", y: "66%" },
+    { key: "1B", label: "一壘", x: "69%", y: "66%" },
     { key: "C", label: "捕手", x: "50%", y: "82%" },
     { key: "DH", label: "指打", x: "31%", y: "86%" }
   ],

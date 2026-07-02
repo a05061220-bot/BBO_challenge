@@ -1,5 +1,6 @@
 (function () {
   const config = window.DraftConfig;
+  const DEBUG_UNLIMITED_SPIN = false;
 
   function rand(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -147,23 +148,205 @@
     return `<span class="stat-item"><span>${label}</span><strong class="${value >= 80 ? "stat-high" : ""}">${value}</strong></span>`;
   }
 
-  function renderPlayerStats(player, statsClass) {
-    const stats = player.type === "hitter"
+  const teamComboThresholds = [
+    { count: 16, bonus: 6 },
+    { count: 12, bonus: 5 },
+    { count: 9, bonus: 3 },
+    { count: 6, bonus: 2 }
+  ];
+
+  function teamComboBonusForCount(count) {
+    return teamComboThresholds.find(threshold => count >= threshold.count)?.bonus || 0;
+  }
+
+  function nextTeamComboThreshold(count) {
+    return [...teamComboThresholds]
+      .sort((left, right) => left.count - right.count)
+      .find(threshold => count < threshold.count)?.count || config.rosterLimits.total;
+  }
+
+  function rosterTeamCounts(players = rosterPlayers()) {
+    const counts = {};
+    players.forEach(player => {
+      if (!player?.team) return;
+      const team = comboTeamName(player.team);
+      counts[team] = (counts[team] || 0) + 1;
+    });
+    return counts;
+  }
+
+  function comboTeamName(team) {
+    if (team === "中信兄弟" || team === "兄弟") return "兄弟";
+    if (team === "和信鯨" || team === "中信鯨") return "和信鯨/中信鯨";
+    if (["俊國", "興農", "義大", "富邦"].includes(team)) return "俊國/興農/義大/富邦";
+    if (team === "米迪亞" || team === "誠泰") return "米迪亞/誠泰";
+    if (["Lamigo", "樂天", "LaNew", "第一金剛"].includes(team)) return "Lamigo/樂天/LaNew/第一金剛";
+    return team;
+  }
+
+  function displayTeamName(team, year) {
+    if (team === "Lamigo" && Number(year) >= 2004 && Number(year) <= 2010) {
+      return "LaNew";
+    }
+
+    return team;
+  }
+
+  function teamComboBonuses(players = rosterPlayers()) {
+    return Object.entries(rosterTeamCounts(players))
+      .map(([team, count]) => ({ team, count, bonus: teamComboBonusForCount(count) }))
+      .filter(combo => combo.bonus > 0)
+      .sort((left, right) => right.bonus - left.bonus || right.count - left.count || left.team.localeCompare(right.team, "zh-Hant"));
+  }
+
+  function teamComboBonusMap(players = rosterPlayers()) {
+    return Object.fromEntries(teamComboBonuses(players).map(combo => [combo.team, combo.bonus]));
+  }
+
+  function topRosterTeamProgress(players = rosterPlayers()) {
+    const entries = Object.entries(rosterTeamCounts(players));
+    if (!entries.length) {
+      return { team: "組合隊", count: 0, bonus: 0 };
+    }
+
+    const [team, count] = entries.sort(
+      ([leftTeam, leftCount], [rightTeam, rightCount]) =>
+        rightCount - leftCount || leftTeam.localeCompare(rightTeam, "zh-Hant")
+    )[0];
+
+    return { team, count, bonus: teamComboBonusForCount(count) };
+  }
+
+  function playerComboBonus(player, bonusMap = teamComboBonusMap()) {
+    return player?.team ? (bonusMap[comboTeamName(player.team)] || 0) : 0;
+  }
+
+  function projectedTeamComboBonus(player) {
+    if (!player?.team || isPlayerAlreadyOnRoster(player)) {
+      return 0;
+    }
+
+    const counts = rosterTeamCounts();
+    return teamComboBonusForCount((counts[comboTeamName(player.team)] || 0) + 1);
+  }
+
+  function capComboAbility(value) {
+    return Math.min(99, Math.max(0, Number(value) || 0));
+  }
+
+  function applyTeamComboBonus(player, bonus = playerComboBonus(player)) {
+    if (!bonus) {
+      return player;
+    }
+
+    if (player.type === "hitter") {
+      return {
+        ...player,
+        power: capComboAbility(player.power + bonus),
+        contact: capComboAbility(player.contact + bonus),
+        speed: capComboAbility(player.speed + bonus),
+        fielding: capComboAbility(player.fielding + bonus),
+        arm: capComboAbility(player.arm + bonus),
+        teamComboBonus: bonus
+      };
+    }
+
+    return {
+      ...player,
+      stamina: capComboAbility(player.stamina + bonus),
+      control: capComboAbility(player.control + bonus),
+      velocity: capComboAbility(player.velocity + bonus),
+      breaking: capComboAbility(player.breaking + bonus),
+      teamComboBonus: bonus
+    };
+  }
+
+  function comboBadgeIcon(bonus) {
+    return {
+      2: "🛡️",
+      3: "⭐",
+      5: "🔥",
+      6: "👑"
+    }[bonus] || "✨";
+  }
+
+  function setTeamInfoFrame(bonus = null) {
+    const teamInfo = document.getElementById("teamInfo");
+    teamInfo.classList.remove(
+      "team-info-result",
+      "team-info-mixed",
+      "team-info-tier-2",
+      "team-info-tier-3",
+      "team-info-tier-5",
+      "team-info-tier-6"
+    );
+
+    if (bonus === null) {
+      return;
+    }
+
+    if (bonus > 0) {
+      teamInfo.classList.add("team-info-result", `team-info-tier-${bonus}`);
+    } else if (bonus === 0) {
+      teamInfo.classList.add("team-info-result", "team-info-mixed");
+    }
+  }
+
+  function renderComboBadge(bonus) {
+    return bonus > 0 ? `<span class="combo-badge combo-tier-${bonus}">組合隊 +${bonus}</span>` : "";
+  }
+
+  function renderComboSummary(combos) {
+    if (!combos.length) {
+      return `<div class="combo-summary muted">組合隊未啟動｜6/9/12/16人：+2/+3/+5/+6</div>`;
+    }
+
+    return `
+<div class="combo-summary active combo-tier-${combos[0].bonus}">
+  <strong>組合隊加成啟動</strong>
+  ${combos.map(combo => `<span class="combo-tier-${combo.bonus}">${combo.team} ${combo.count}人：全能力 +${combo.bonus}</span>`).join("")}
+</div>
+`;
+  }
+
+  function renderComboCountPill(combos = teamComboBonuses()) {
+    if (!combos.length) {
+      return `<span class="card-count combo-count-muted combo-count-hint" title="同隊 6/9/12/16 人可獲得 +2/+3/+5/+6">組合隊 6/9/12/16人：+2/+3/+5/+6</span>`;
+    }
+
+    return combos
+      .map(combo => `<span class="card-count combo-count-active combo-team-pill combo-tier-${combo.bonus}" title="${combo.team} ${combo.count}人，全能力 +${combo.bonus}">${combo.team} +${combo.bonus}</span>`)
+      .join("");
+  }
+
+  function renderComboProgressPill(progress = topRosterTeamProgress()) {
+    const activeClass = progress.bonus > 0 ? `combo-progress-active combo-tier-${progress.bonus}` : progress.count > 0 ? "combo-progress-building" : "";
+    const target = nextTeamComboThreshold(progress.count);
+    const label = progress.count > 0 ? `${progress.bonus ? `${comboBadgeIcon(progress.bonus)} ` : ""}${progress.count}/${target} ${progress.team}` : `0/${target} 組合隊`;
+    const title = progress.count > 0
+      ? `${progress.team}目前${progress.count}人${progress.bonus ? `，全能力 +${progress.bonus}` : `，滿${target}人啟動組合隊`}`
+      : "選擇同隊球員可啟動組合隊加成";
+    return `<span class="card-count combo-progress-count combo-team-pill ${activeClass}" title="${title}">${label}</span>`;
+  }
+
+  function renderPlayerStats(player, statsClass, bonus = 0) {
+    const displayPlayer = applyTeamComboBonus(player, bonus);
+    const stats = displayPlayer.type === "hitter"
       ? [
-          ["力量", player.power],
-          ["打擊", player.contact],
-          ["速度", player.speed],
-          ["傳球", player.arm],
-          ["守備", player.fielding]
+          ["力量", displayPlayer.power],
+          ["打擊", displayPlayer.contact],
+          ["速度", displayPlayer.speed],
+          ["傳球", displayPlayer.arm],
+          ["守備", displayPlayer.fielding]
         ]
       : [
-          ["體力", player.stamina],
-          ["控球", player.control],
-          ["球威", player.velocity],
-          ["變化", player.breaking]
+          ["體力", displayPlayer.stamina],
+          ["控球", displayPlayer.control],
+          ["球威", displayPlayer.velocity],
+          ["變化", displayPlayer.breaking]
         ];
 
-    return `<div class="${statsClass} stats-grid">${stats.map(([label, value]) => statItem(label, value)).join("")}</div>`;
+    return `<div class="${statsClass} stats-grid ${bonus ? "combo-boosted-stats" : ""}">${stats.map(([label, value]) => statItem(label, value)).join("")}</div>`;
   }
 
   function renderRosterPlayer(player) {
@@ -171,9 +354,10 @@
       return "點選加入";
     }
 
+    const bonus = playerComboBonus(player);
     return `
-<span class="roster-player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}</span>
-<div class="roster-player-tooltip">${renderPlayerStats(player, "stats roster-tooltip-stats")}</div>
+<span class="roster-player-name ${cardTypeClass(player.cardType)} ${bonus ? "combo-boosted-card" : ""}">${formatShortYear(player.year)} ${player.name}${renderComboBadge(bonus)}</span>
+<div class="roster-player-tooltip">${renderPlayerStats(player, "stats roster-tooltip-stats", bonus)}</div>
 `;
   }
 
@@ -314,13 +498,15 @@
       return null;
     }
 
+    const team = displayTeamName(raw.team || (raw.league === "Team Taiwan" ? "WBC" : "未知球隊"), raw.year);
+
     if (raw.type === "hitter") {
       return applyTmlHitterAdjustments({
         id: raw.id || `import-h-${index}`,
         league: raw.league || "CPBL",
         type: "hitter",
         name: raw.name || "未命名",
-        team: raw.team || (raw.league === "Team Taiwan" ? "WBC" : "未知球隊"),
+        team,
         year: Number(raw.year) || 0,
         positions: Array.isArray(raw.positions) ? raw.positions.filter(Boolean) : [],
         power: normalizeAbility(raw.power),
@@ -340,7 +526,7 @@
       league: raw.league || "CPBL",
       type: "pitcher",
       name: raw.name || "未命名",
-      team: raw.team || (raw.league === "Team Taiwan" ? "WBC" : "未知球隊"),
+      team,
       year: Number(raw.year) || 0,
       role: raw.role || (Array.isArray(raw.roles) ? raw.roles[0] : "SP") || "SP",
       roles: Array.isArray(raw.roles) ? raw.roles.filter(Boolean) : (raw.role ? [raw.role] : []),
@@ -576,13 +762,14 @@
 
   function updateRerollButtons() {
     const canReroll = draftStarted && Boolean(currentPool) && rosterCount() < config.rosterLimits.total;
-    document.getElementById("rerollYearButton").disabled = !canReroll || yearRerollUsed;
-    document.getElementById("rerollTeamButton").disabled = !canReroll || teamRerollUsed;
+    document.getElementById("rerollYearButton").disabled = !canReroll || (!DEBUG_UNLIMITED_SPIN && yearRerollUsed);
+    document.getElementById("rerollTeamButton").disabled = !canReroll || (!DEBUG_UNLIMITED_SPIN && teamRerollUsed);
   }
 
   function showCurrentPool() {
     clearSelection();
-    document.getElementById("teamInfo").innerHTML = `🎯 ${currentPool.year} ${currentPool.team}`;
+    setTeamInfoFrame();
+    document.getElementById("teamInfo").innerHTML = `🎯 ${currentPool.year} ${currentPool.team}${DEBUG_UNLIMITED_SPIN ? "｜DEBUG 無限SPIN" : ""}`;
     updateRoundInfo();
     renderPlayers();
     renderRoster();
@@ -598,6 +785,7 @@
     currentPool = null;
     playerPickedThisRound = true;
     clearSelection();
+    setTeamInfoFrame();
     document.getElementById("teamInfo").innerHTML = "目前名單無可加入球員，獲得一次免費 SPIN";
     document.getElementById("players").innerHTML = "";
     updateRerollButtons();
@@ -608,12 +796,20 @@
   function updateRoundInfo() {
     const counts = rosterCardTypeCounts();
     const limits = getModeCardLimits();
+    const combos = teamComboBonuses();
     const limitInfo = limits
       ? `<span class="elite-count">紅紫 ${counts["紫"] + counts["紅"]}/${limits.elite}</span>`
       : `<span class="elite-count">自由頻道：卡色不限</span>`;
+    const roundPickInfo = document.getElementById("roundPickInfo");
+    if (roundPickInfo) {
+      roundPickInfo.innerHTML = `本輪已選：打者 ${roundPicks.hitters} / ${config.roundLimits.hitters}，投手 ${roundPicks.pitchers} / ${config.roundLimits.pitchers}`;
+    }
     document.getElementById("selectionInfo").innerHTML = `
-      <span>本輪已選：打者 ${roundPicks.hitters} / ${config.roundLimits.hitters}，投手 ${roundPicks.pitchers} / ${config.roundLimits.pitchers}</span>
-      <span class="card-counts" title="${limits ? `紫卡最多${limits.purple}位；紅卡與紫卡合計最多${limits.elite}位` : "自由頻道卡色數量不限"}">
+      <span class="card-counts combo-counts">
+        ${renderComboProgressPill()}
+        ${renderComboCountPill(combos)}
+      </span>
+      <span class="card-counts card-limit-counts" title="${limits ? `紫卡最多${limits.purple}位；紅卡與紫卡合計最多${limits.elite}位` : "自由頻道卡色數量不限"}">
         <span class="card-count card-purple">紫 ${counts["紫"]}</span>
         <span class="card-count card-red">紅 ${counts["紅"]}</span>
         <span class="card-count card-yellow">黃 ${counts["黃"]}</span>
@@ -816,7 +1012,7 @@ ${renderRosterPlayer(player)}
 
     document.getElementById("fieldRoster").innerHTML = fieldHtml;
     document.getElementById("pitcherRoster").innerHTML = pitcherHtml;
-    document.getElementById("counter").innerHTML = `${rosterCount()} / ${config.rosterLimits.total}`;
+    document.getElementById("counter").innerHTML = "";
   }
 
   function renderPlayers() {
@@ -843,11 +1039,12 @@ ${renderRosterPlayer(player)}
       const isSelected = selectedPlayerId === player.id;
       const badgeClass = unavailable ? "unavailable" : eligibleSlots.length ? "eligible" : "";
       const statsClass = unavailable ? "stats unavailable" : "stats";
-      const info = renderPlayerStats(player, statsClass);
+      const projectedBonus = unavailable ? 0 : projectedTeamComboBonus(player);
+      const info = renderPlayerStats(player, statsClass, projectedBonus);
 
       return `
-<div class="player ${isSelected ? "selected" : ""} ${unavailable ? "unavailable" : ""}" onclick="selectPlayer('${player.id}')">
-<b class="player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}</b>
+<div class="player ${isSelected ? "selected" : ""} ${unavailable ? "unavailable" : ""} ${projectedBonus ? "combo-boosted-card" : ""}" onclick="selectPlayer('${player.id}')">
+<b class="player-name ${cardTypeClass(player.cardType)}">${formatShortYear(player.year)} ${player.name}${renderComboBadge(projectedBonus)}</b>
 <span class="badge position-badge ${badgeClass}">${player.type === "hitter" ? formatHitterPositions(player.positions) : player.role}</span>
 ${info}
 </div>
@@ -1088,14 +1285,15 @@ ${info}
   }
 
   function renderSimulationPlayer(slotKey, player, score) {
+    const bonus = playerComboBonus(player);
     return `
 <div class="simulation-player">
   <div class="simulation-player-head">
-    <span class="roster-player-name ability-name-bar ${cardTypeClass(player.cardType)}" style="${scoreBarStyle(score)}">${formatShortYear(player.year)} ${player.name}</span>
+    <span class="roster-player-name ability-name-bar ${cardTypeClass(player.cardType)} ${bonus ? "combo-boosted-card" : ""}" style="${scoreBarStyle(score)}">${formatShortYear(player.year)} ${player.name}${renderComboBadge(bonus)}</span>
     <span class="simulation-slot">${slotKey}</span>
     <strong>${score.toFixed(1)}</strong>
   </div>
-  ${renderPlayerStats(player, "stats stats-grid simulation-stats")}
+  ${renderPlayerStats(player, "stats stats-grid simulation-stats", bonus)}
 </div>
 `;
   }
@@ -1115,6 +1313,10 @@ ${info}
     const pitcherHtml = sortedPitchers
       .map(([slotKey, player]) => renderSimulationPlayer(slotKey, player, pitcherScore(player)))
       .join("");
+    const comboHtml = renderComboSummary(teamComboBonuses([
+      ...sortedHitters.map(([, player]) => player),
+      ...sortedPitchers.map(([, player]) => player)
+    ]));
 
     document.getElementById("draftPanel").hidden = true;
     document.getElementById("simulationPanel").hidden = false;
@@ -1125,6 +1327,12 @@ ${info}
         <div><span>隊伍分數</span><strong>${score.toFixed(1)}</strong></div>
         <div><span>聯盟差距</span><strong>${scoreDiff >= 0 ? "+" : ""}${scoreDiff.toFixed(1)}</strong></div>
       </div>
+      <div class="comparison-info">
+        <strong>比較基準：聯盟平均隊伍</strong>
+        <span>你的隊伍分數 ${score.toFixed(1)} vs 聯盟平均 ${leagueAverageScore.toFixed(1)}</span>
+        <span>差距 ${scoreDiff >= 0 ? "+" : ""}${scoreDiff.toFixed(1)}，換算成 120 場勝場。</span>
+      </div>
+      ${comboHtml}
       <div class="simulation-section">
         <h3>打者陣容</h3>
         <div class="simulation-roster">${hitterHtml}</div>
@@ -1133,7 +1341,6 @@ ${info}
         <h3>投手陣容</h3>
         <div class="simulation-roster">${pitcherHtml}</div>
       </div>
-      <div class="simulation-note">聯盟平均分數：${leagueAverageScore.toFixed(1)}</div>
     `;
   }
 
@@ -1223,7 +1430,7 @@ ${info}
   function spinTeam() {
     startBackgroundMusic();
 
-    if (draftStarted && !playerPickedThisRound) {
+    if (!DEBUG_UNLIMITED_SPIN && draftStarted && !playerPickedThisRound) {
       alert("請先選擇一位球員再 SPIN");
       return;
     }
@@ -1245,7 +1452,7 @@ ${info}
   }
 
   function rerollYear() {
-    if (!draftStarted || yearRerollUsed) {
+    if (!draftStarted || (!DEBUG_UNLIMITED_SPIN && yearRerollUsed)) {
       return;
     }
 
@@ -1265,7 +1472,7 @@ ${info}
   }
 
   function rerollTeam() {
-    if (!draftStarted || teamRerollUsed) {
+    if (!draftStarted || (!DEBUG_UNLIMITED_SPIN && teamRerollUsed)) {
       return;
     }
 
@@ -1308,8 +1515,10 @@ ${info}
       CP2: null
     };
 
+    setTeamInfoFrame();
     document.getElementById("teamInfo").innerHTML = "按下 SPIN 開始";
     document.getElementById("selectionInfo").innerHTML = "";
+    document.getElementById("roundPickInfo").innerHTML = "";
     document.getElementById("result").innerHTML = "";
     showDraftPanel();
 
@@ -1321,6 +1530,7 @@ ${info}
   }
 
   function hitterScore(player, slotKey) {
+    const scoredPlayer = applyTeamComboBonus(player);
     const position = slotGroup(slotKey);
     const weights = config.seasonWeights.hitters[position];
 
@@ -1329,15 +1539,16 @@ ${info}
     }
 
     return (
-      player.power * weights.power +
-      player.contact * weights.contact +
-      player.speed * weights.speed +
-      player.fielding * weights.fielding +
-      player.arm * weights.arm
+      scoredPlayer.power * weights.power +
+      scoredPlayer.contact * weights.contact +
+      scoredPlayer.speed * weights.speed +
+      scoredPlayer.fielding * weights.fielding +
+      scoredPlayer.arm * weights.arm
     );
   }
 
   function pitcherScore(player) {
+    const scoredPlayer = applyTeamComboBonus(player);
     const weights = config.seasonWeights.pitchers[player.role];
 
     if (!weights) {
@@ -1345,10 +1556,10 @@ ${info}
     }
 
     return (
-      player.velocity * weights.velocity +
-      player.control * weights.control +
-      player.stamina * weights.stamina +
-      player.breaking * weights.breaking
+      scoredPlayer.velocity * weights.velocity +
+      scoredPlayer.control * weights.control +
+      scoredPlayer.stamina * weights.stamina +
+      scoredPlayer.breaking * weights.breaking
     );
   }
 
@@ -1388,14 +1599,14 @@ ${info}
       else if (wins >= 90) grade = "B";
       else if (wins >= 80) grade = "C";
 
+      const finalCombo = teamComboBonuses([...hitters, ...pitchers])[0];
+      setTeamInfoFrame(finalCombo?.bonus || 0);
+      document.getElementById("teamInfo").innerHTML = finalCombo
+        ? `${finalCombo.team}組合隊｜${finalCombo.count}人 全能力 +${finalCombo.bonus}`
+        : "🏴 雜牌軍";
       document.getElementById("result").innerHTML = `${wins}-${losses}<br>${grade}`;
-      document.getElementById("selectionInfo").innerHTML = `
-        <div class="comparison-info">
-          比較基準：聯盟平均隊伍<br>
-          你的隊伍分數 ${score.toFixed(1)} vs 聯盟平均 ${leagueAverageScore.toFixed(1)}<br>
-          差距 ${scoreDiff >= 0 ? "+" : ""}${scoreDiff.toFixed(1)}，換算成 120 場勝場。
-        </div>
-      `;
+      document.getElementById("selectionInfo").innerHTML = "";
+      document.getElementById("roundPickInfo").innerHTML = "";
       showSimulationPanel({
         wins,
         losses,
@@ -1407,12 +1618,16 @@ ${info}
         pitcherEntries
       });
       let nickname = "";
-      const highestEntry = await window.BBOStats?.getHighestScore?.(gameMode);
-      if (!highestEntry || score > Number(highestEntry.score || 0)) {
-        const input = window.prompt("恭喜刷新本頻道最高分！請輸入你的暱稱：", "");
-        nickname = window.BBOStats?.sanitizeNickname?.(input) || "匿名玩家";
+      if (!DEBUG_UNLIMITED_SPIN) {
+        const highestEntry = await window.BBOStats?.getHighestScore?.(gameMode);
+        if (!highestEntry || score > Number(highestEntry.score || 0)) {
+          const input = window.prompt("恭喜刷新本頻道最高分！請輸入你的暱稱：", "");
+          nickname = window.BBOStats?.sanitizeNickname?.(input) || "匿名玩家";
+        }
+        window.BBOStats?.record({ mode: gameMode, score, wins, losses, nickname });
+      } else {
+        console.info("DEBUG 無限SPIN模式：本次成績不寫入排行榜。");
       }
-      window.BBOStats?.record({ mode: gameMode, score, wins, losses, nickname });
     } catch (error) {
       console.error("模擬球季失敗", error);
       alert(`模擬球季失敗：${error.message}`);
