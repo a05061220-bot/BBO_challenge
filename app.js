@@ -1345,6 +1345,43 @@ ${info}
     `;
   }
 
+  function createStatisticsTeamPayload(hitterEntries, pitcherEntries, combo) {
+    const compactPlayer = (slotKey, player, score) => ({
+      slot: slotKey,
+      year: player.year,
+      name: player.name,
+      team: player.team,
+      league: player.league,
+      cardType: player.cardType,
+      type: player.type,
+      positions: player.positions || player.roles || [player.role].filter(Boolean),
+      score: Number(score.toFixed(1)),
+      stats: player.type === "hitter"
+        ? {
+          power: player.power,
+          contact: player.contact,
+          speed: player.speed,
+          fielding: player.fielding,
+          arm: player.arm
+        }
+        : {
+          stamina: player.stamina,
+          control: player.control,
+          velocity: player.velocity,
+          breaking: player.breaking
+        }
+    });
+    return {
+      combo: combo ? {
+        team: combo.team,
+        count: combo.count,
+        bonus: combo.bonus
+      } : null,
+      hitters: hitterEntries.map(([slotKey, player]) => compactPlayer(slotKey, player, hitterScore(player, slotKey))),
+      pitchers: pitcherEntries.map(([slotKey, player]) => compactPlayer(slotKey, player, pitcherScore(player)))
+    };
+  }
+
   function addSelectedToSlot(slotKey) {
     const player = getSelectedPlayer();
 
@@ -1625,7 +1662,14 @@ ${info}
           const input = window.prompt("恭喜刷新本頻道最高分！請輸入你的暱稱：", "");
           nickname = window.BBOStats?.sanitizeNickname?.(input) || "匿名玩家";
         }
-        window.BBOStats?.record({ mode: gameMode, score, wins, losses, nickname });
+        window.BBOStats?.record({
+          mode: gameMode,
+          score,
+          wins,
+          losses,
+          nickname,
+          team: createStatisticsTeamPayload(hitterEntries, pitcherEntries, finalCombo)
+        });
       } else {
         console.info("DEBUG 無限SPIN模式：本次成績不寫入排行榜。");
       }
