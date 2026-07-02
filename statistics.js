@@ -85,15 +85,96 @@
       : "-";
   }
 
-  function renderPlayer(player) {
+  function cardTypeClass(cardType) {
+    return {
+      藍: "card-blue",
+      黃: "card-yellow",
+      紅: "card-red",
+      紫: "card-purple"
+    }[cardType] || "";
+  }
+
+  function scoreBarStyle(score) {
+    const width = Math.max(18, Math.min(100, Number(score) || 0));
+    return `--ability-width:${width}%`;
+  }
+
+  function renderStat(label, value) {
+    const numberValue = Number(value);
+    const highClass = Number.isFinite(numberValue) && numberValue >= 80 ? "stat-high" : "";
+    return `<span class="stat-item"><span>${label}</span><strong class="${highClass}">${escapeHtml(value ?? "-")}</strong></span>`;
+  }
+
+  function applyStoredComboStats(player, bonus) {
     const stats = player.stats || {};
-    const statText = player.type === "hitter"
-      ? `力${stats.power ?? "-"} 打${stats.contact ?? "-"} 速${stats.speed ?? "-"} 守${stats.fielding ?? "-"} 傳${stats.arm ?? "-"}`
-      : `體${stats.stamina ?? "-"} 控${stats.control ?? "-"} 威${stats.velocity ?? "-"} 變${stats.breaking ?? "-"}`;
+    const boost = Number(bonus) || 0;
+    const boosted = value => Math.min(99, Math.max(0, (Number(value) || 0) + boost));
+    if (!boost) return stats;
+    return player.type === "hitter"
+      ? {
+        power: boosted(stats.power),
+        contact: boosted(stats.contact),
+        speed: boosted(stats.speed),
+        fielding: boosted(stats.fielding),
+        arm: boosted(stats.arm)
+      }
+      : {
+        stamina: boosted(stats.stamina),
+        control: boosted(stats.control),
+        velocity: boosted(stats.velocity),
+        breaking: boosted(stats.breaking)
+      };
+  }
+
+  function renderStats(player, bonus = 0) {
+    const stats = applyStoredComboStats(player, bonus);
+    const items = player.type === "hitter"
+      ? [
+        ["力量", stats.power],
+        ["打擊", stats.contact],
+        ["速度", stats.speed],
+        ["傳球", stats.arm],
+        ["守備", stats.fielding]
+      ]
+      : [
+        ["體力", stats.stamina],
+        ["控球", stats.control],
+        ["球威", stats.velocity],
+        ["變化", stats.breaking]
+      ];
+    return `<div class="stats stats-grid statistics-team-stats ${bonus ? "combo-boosted-stats" : ""}">${items.map(([label, value]) => renderStat(label, value)).join("")}</div>`;
+  }
+
+  function formatShortYear(year) {
+    return String(Number(year) % 100).padStart(2, "0");
+  }
+
+  function comboTierClass(combo) {
+    const count = Number(combo?.count || 0);
+    if (count >= 16) return "statistics-team-tier-purple";
+    if (count >= 12) return "statistics-team-tier-red";
+    if (count >= 9) return "statistics-team-tier-yellow";
+    if (count >= 6) return "statistics-team-tier-blue";
+    return "statistics-team-tier-none";
+  }
+
+  function renderPlayer(player, bonus = 0) {
+    const score = Number(player.score || 0);
     return `
       <div class="statistics-team-player">
-        <strong>${escapeHtml(player.slot)}｜${escapeHtml(player.year)} ${escapeHtml(player.name)}</strong>
-        <span>${escapeHtml(player.cardType)}｜${escapeHtml(player.team)}｜${escapeHtml(formatPositions(player))}｜${escapeHtml(statText)}｜加權 ${Number(player.score || 0).toFixed(1)}</span>
+        <div class="statistics-team-player-head">
+          <span class="roster-player-name ability-name-bar ${cardTypeClass(player.cardType)} ${bonus ? "combo-boosted-card" : ""}" style="${scoreBarStyle(score)}">
+            ${escapeHtml(formatShortYear(player.year))} ${escapeHtml(player.name)}${bonus ? `<span class="combo-badge">+${bonus}</span>` : ""}
+          </span>
+          <span class="simulation-slot">${escapeHtml(player.slot)}</span>
+          <strong>${score.toFixed(1)}</strong>
+        </div>
+        <div class="statistics-team-subline">
+          <span>${escapeHtml(player.cardType)}卡</span>
+          <span>${escapeHtml(player.team)}</span>
+          <span>${escapeHtml(formatPositions(player))}</span>
+        </div>
+        ${renderStats(player, bonus)}
       </div>
     `;
   }
@@ -113,20 +194,33 @@
       return;
     }
     const combo = entry.team.combo;
+    const comboBonus = Number(combo?.bonus || 0);
+    const hitterCount = (entry.team.hitters || []).length;
+    const pitcherCount = (entry.team.pitchers || []).length;
     panel.hidden = false;
     panel.innerHTML = `
       <button class="statistics-team-close" onclick="BBOStats.closeTopTeam()">×</button>
-      <h2>${modeLabels[mode]} 第一名隊伍</h2>
+      <div class="statistics-team-hero ${comboTierClass(combo)}">
+        <div>
+          <span class="statistics-team-kicker">CHAMPION ROSTER</span>
+          <h2>${modeLabels[mode]} 第一名隊伍</h2>
+          <p>${combo ? `${escapeHtml(combo.team)}組合隊｜${combo.count}人 全能力 +${combo.bonus}` : "雜牌軍｜沒有組合隊加成"}</p>
+        </div>
+        <div class="statistics-team-score">
+          <span>${Number(entry.wins || 0)}-${Number(entry.losses || 0)}</span>
+          <strong>${Number(entry.score || 0).toFixed(1)}</strong>
+        </div>
+      </div>
       <div class="statistics-team-meta">
         <span>玩家：<strong>${escapeHtml(sanitizeNickname(entry.nickname))}</strong></span>
-        <span>戰績：<strong>${Number(entry.wins || 0)}-${Number(entry.losses || 0)}</strong></span>
-        <span>分數：<strong>${Number(entry.score || 0).toFixed(1)}</strong></span>
-        <span>組合隊：<strong>${combo ? `${escapeHtml(combo.team)}｜${combo.count}人 +${combo.bonus}` : "雜牌軍"}</strong></span>
+        <span>野手：<strong>${hitterCount}</strong></span>
+        <span>投手：<strong>${pitcherCount}</strong></span>
+        <span>組合隊：<strong>${combo ? `+${combo.bonus}` : "無"}</strong></span>
       </div>
-      <h3>野手</h3>
-      <div class="statistics-team-roster">${(entry.team.hitters || []).map(renderPlayer).join("")}</div>
-      <h3>投手</h3>
-      <div class="statistics-team-roster">${(entry.team.pitchers || []).map(renderPlayer).join("")}</div>
+      <h3 class="statistics-team-section-title">野手陣容</h3>
+      <div class="statistics-team-roster">${(entry.team.hitters || []).map(player => renderPlayer(player, comboBonus)).join("")}</div>
+      <h3 class="statistics-team-section-title">投手群</h3>
+      <div class="statistics-team-roster">${(entry.team.pitchers || []).map(player => renderPlayer(player, comboBonus)).join("")}</div>
     `;
     panel.scrollIntoView({ behavior: "smooth", block: "center" });
   }
