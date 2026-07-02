@@ -176,6 +176,7 @@
   }
 
   function comboTeamName(team) {
+    if (["WBC", "WBCS", "WBC Team Taiwan", "WBCS Team Taiwan"].includes(team)) return "中華隊";
     if (team === "中信兄弟" || team === "兄弟") return "兄弟";
     if (team === "和信鯨" || team === "中信鯨") return "和信鯨/中信鯨";
     if (["俊國", "興農", "義大", "富邦"].includes(team)) return "俊國/興農/義大/富邦";
