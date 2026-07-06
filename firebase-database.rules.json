@@ -44,6 +44,14 @@
         ".write": "auth != null"
       }
     },
+    "challengePlayEvents": {
+      ".read": true,
+      "$mode": {
+        "$eventId": {
+          ".write": "auth != null"
+        }
+      }
+    },
     "draftPlayers": {
       "$uid": {
         ".read": "auth != null",

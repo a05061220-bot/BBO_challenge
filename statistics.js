@@ -31,14 +31,8 @@
   async function recordPlay(mode) {
     try {
       const db = await database();
-      const modeRef = db.ref(`challengeResults/${mode}`);
-      const countRef = db.ref(`challengePlayCounts/${mode}`);
-      const completedSnapshot = await modeRef.once("value");
-      const completedCount = completedSnapshot.numChildren();
-      await countRef.transaction(currentValue => {
-        const currentCount = Number(currentValue);
-        const baseCount = Number.isFinite(currentCount) ? currentCount : completedCount;
-        return baseCount + 1;
+      await db.ref(`challengePlayEvents/${mode}`).push().set({
+        createdAt: firebase.database.ServerValue.TIMESTAMP
       });
     } catch (error) {
       console.error("儲存遊玩次數失敗", error);
@@ -72,9 +66,11 @@
     }, null);
   }
 
-  function renderMode(mode, values, storedPlayCount) {
+  function renderMode(mode, values, playStats = {}) {
     const scores = values.map(item => Number(item.score)).filter(Number.isFinite);
-    const playCount = Math.max(Number(storedPlayCount) || 0, scores.length);
+    const eventCount = Number(playStats.eventCount) || 0;
+    const legacyPlayCount = Number(playStats.legacyCount) || 0;
+    const playCount = Math.max(legacyPlayCount, scores.length + eventCount);
     const average = scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
     const highest = scores.length ? Math.max(...scores) : 0;
     const lowest = scores.length ? Math.min(...scores) : 0;
@@ -288,10 +284,15 @@
     try {
       const snapshot = await (await database()).ref("challengeResults").once("value");
       const playSnapshot = await (await database()).ref("challengePlayCounts").once("value");
+      const playEventsSnapshot = await (await database()).ref("challengePlayEvents").once("value");
       const data = snapshot.val() || {};
       const playCounts = playSnapshot.val() || {};
+      const playEvents = playEventsSnapshot.val() || {};
       container.innerHTML = ["minor", "amateur", "free"]
-        .map(mode => renderMode(mode, Object.values(data[mode] || {}), playCounts[mode]))
+        .map(mode => renderMode(mode, Object.values(data[mode] || {}), {
+          legacyCount: playCounts[mode],
+          eventCount: Object.keys(playEvents[mode] || {}).length
+        }))
         .join("");
       closeTopTeam();
     } catch (error) {
