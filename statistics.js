@@ -28,6 +28,23 @@
     }
   }
 
+  async function recordPlay(mode) {
+    try {
+      const db = await database();
+      const modeRef = db.ref(`challengeResults/${mode}`);
+      const countRef = db.ref(`challengePlayCounts/${mode}`);
+      const completedSnapshot = await modeRef.once("value");
+      const completedCount = completedSnapshot.numChildren();
+      await countRef.transaction(currentValue => {
+        const currentCount = Number(currentValue);
+        const baseCount = Number.isFinite(currentCount) ? currentCount : completedCount;
+        return baseCount + 1;
+      });
+    } catch (error) {
+      console.error("儲存遊玩次數失敗", error);
+    }
+  }
+
   function sanitizeNickname(value) {
     const nickname = String(value || "").trim();
     return nickname || "匿名玩家";
@@ -55,8 +72,9 @@
     }, null);
   }
 
-  function renderMode(mode, values) {
+  function renderMode(mode, values, storedPlayCount) {
     const scores = values.map(item => Number(item.score)).filter(Number.isFinite);
+    const playCount = Math.max(Number(storedPlayCount) || 0, scores.length);
     const average = scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
     const highest = scores.length ? Math.max(...scores) : 0;
     const lowest = scores.length ? Math.min(...scores) : 0;
@@ -67,7 +85,7 @@
     return `
       <div class="statistics-card">
         <h2>${modeLabels[mode]}</h2>
-        <div><span>完成次數</span><strong>${scores.length}</strong></div>
+        <div><span>遊玩次數</span><strong>${playCount}</strong></div>
         <div><span>平均分數</span><strong>${average.toFixed(1)}</strong></div>
         <div><span>最高分數</span><strong>${highest.toFixed(1)}</strong></div>
         <div><span>最高分玩家</span><strong>${highestNickname}</strong></div>
@@ -269,9 +287,11 @@
     container.innerHTML = '<div class="info">統計資料載入中...</div>';
     try {
       const snapshot = await (await database()).ref("challengeResults").once("value");
+      const playSnapshot = await (await database()).ref("challengePlayCounts").once("value");
       const data = snapshot.val() || {};
+      const playCounts = playSnapshot.val() || {};
       container.innerHTML = ["minor", "amateur", "free"]
-        .map(mode => renderMode(mode, Object.values(data[mode] || {})))
+        .map(mode => renderMode(mode, Object.values(data[mode] || {}), playCounts[mode]))
         .join("");
       closeTopTeam();
     } catch (error) {
@@ -280,5 +300,5 @@
   }
 
   window.openStatistics = open;
-  window.BBOStats = { record, getHighestScore, sanitizeNickname, showTopTeam, closeTopTeam };
+  window.BBOStats = { record, recordPlay, getHighestScore, sanitizeNickname, showTopTeam, closeTopTeam };
 })();

@@ -1100,7 +1100,8 @@ ${info}
       amateur: "業餘頻道",
       free: "自由頻道"
     }[mode];
-    remakeDraft();
+    remakeDraft({ recordPlay: false });
+    window.BBOStats?.recordPlay?.(gameMode);
     updateOnlineDraftUi();
     showView("gameView");
   }
@@ -1133,7 +1134,7 @@ ${info}
       amateur: "業餘頻道",
       free: "自由頻道"
     }[mode]}`;
-    remakeDraft();
+    remakeDraft({ recordPlay: false });
     updateOnlineDraftUi();
     showView("gameView");
   }
@@ -1529,7 +1530,12 @@ ${info}
     showCurrentPool();
   }
 
-  function remakeDraft() {
+  function remakeDraft(options = {}) {
+    const shouldRecordPlay = options.recordPlay !== false && !onlineDraftMode;
+    if (shouldRecordPlay) {
+      window.BBOStats?.recordPlay?.(gameMode);
+    }
+
     currentPool = null;
     selectedPlayerId = null;
     movingRosterSlot = null;
