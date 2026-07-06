@@ -38,6 +38,12 @@
         }
       }
     },
+    "challengePlayCounts": {
+      ".read": true,
+      "$mode": {
+        ".write": "auth != null"
+      }
+    },
     "draftPlayers": {
       "$uid": {
         ".read": "auth != null",
